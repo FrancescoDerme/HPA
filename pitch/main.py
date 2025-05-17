@@ -451,6 +451,191 @@ class scene4(ThreeDScene):
         self.play(FadeOut(all_3d_elements), run_time=1.5)
         self.wait(0.5)
 
+
+class scene41(Scene): # Or scene41 if you prefer to keep your naming
+    def construct(self):
+        # --- 1. Domain and Detailed Non-homogeneous Mesh (Initially Centered) ---
+        domain_size = 6.0
+        L = domain_size / 2.0
+        domain_outline = Square(side_length=domain_size, stroke_color=BLUE_D, stroke_width=2.5)
+        domain_outline.move_to(ORIGIN)
+
+        mesh_elements = VGroup()
+        quadrant_L = L / 2.0
+        quadrant_centers = {
+            "TL": np.array([-quadrant_L, quadrant_L, 0]), "TR": np.array([quadrant_L, quadrant_L, 0]),
+            "BL": np.array([-quadrant_L, -quadrant_L, 0]), "BR": np.array([quadrant_L, -quadrant_L, 0])
+        }
+        
+        n_fine_divs = 12 
+        n_coarse_divs = 6
+
+        def create_subgrid_elements(center_pos, half_L_quad, num_divs, base_color):
+            sub_elements = VGroup()
+            step = (2 * half_L_quad) / num_divs
+            for i in range(num_divs):
+                for j in range(num_divs):
+                    x_bottom_left = center_pos[0] - half_L_quad + i * step
+                    y_bottom_left = center_pos[1] - half_L_quad + j * step
+                    rect = Rectangle(width=step, height=step, 
+                                     stroke_color=base_color, stroke_width=0.5,
+                                     fill_opacity=0.0) 
+                    rect.move_to(np.array([x_bottom_left + step/2, y_bottom_left + step/2, 0]))
+                    sub_elements.add(rect)
+            return sub_elements
+
+        mesh_elements.add(*create_subgrid_elements(quadrant_centers["BL"], quadrant_L, n_fine_divs, DARK_GREY))
+        mesh_elements.add(*create_subgrid_elements(quadrant_centers["TR"], quadrant_L, n_fine_divs, DARK_GREY))
+        mesh_elements.add(*create_subgrid_elements(quadrant_centers["TL"], quadrant_L, n_coarse_divs, GREY_BROWN))
+        mesh_elements.add(*create_subgrid_elements(quadrant_centers["BR"], quadrant_L, n_coarse_divs, GREY_BROWN))
+
+        self.play(Create(domain_outline), Create(mesh_elements, lag_ratio=0.002, run_time=4.0))
+        self.wait(0.5)
+        mesh_display_group = VGroup(domain_outline, mesh_elements)
+
+        # --- 2. Indicator Function I(x) Visualization on Mesh ---
+
+
+        peak_bl_center = quadrant_centers["BL"]
+        peak_tr_center = quadrant_centers["TR"]
+        indicator_sigma = quadrant_L * 0.85
+
+        def get_indicator_value(point_xyz):
+            p = point_xyz[:2] 
+            val_bl = 0.9 * np.exp(-np.sum((p - peak_bl_center[:2])**2) / (2 * indicator_sigma**2))
+            val_tr = 0.9 * np.exp(-np.sum((p - peak_tr_center[:2])**2) / (2 * indicator_sigma**2))
+            return np.clip(val_bl + val_tr, 0, 1.0) 
+
+        indicator_value_animations = [
+            element.animate.set_fill(
+                interpolate_color(BLUE_E, RED_D, get_indicator_value(element.get_center())), 
+                opacity=0.2 + 0.6 * get_indicator_value(element.get_center()) 
+            ) for element in mesh_elements
+        ]
+        self.play(LaggedStart(*indicator_value_animations, lag_ratio=0.002), run_time=3.0)
+        self.wait(1.0)
+
+        # --- 3. Layout Change & 1D Plot of I(x) with Threshold ---
+        target_mesh_scale = 0.75 
+        target_mesh_position = LEFT * (self.camera.frame_width / 2) * 0.50 
+        
+        plot_width = self.camera.frame_width * 0.38 
+        plot_height = 3.0
+        plot_group_target_x = self.camera.frame_width / 3.8 
+        plot_group_target_y = 0.2 
+
+        plot_axes = Axes(
+            x_range=[-L - 0.1, L + 0.1, L/2], 
+            y_range=[-0.05, 1.05, 0.2],   
+            x_length=plot_width,
+            y_length=plot_height,
+            axis_config={"include_numbers": True, "font_size": 16, 
+                         "decimal_number_config": {"num_decimal_places": 1}},
+            y_axis_config={"include_numbers": True, "font_size": 16,
+                           "decimal_number_config": {"num_decimal_places": 1}},
+            tips=False
+        )
+        plot_xlabel = MathTex("x \\text{ (domain slice)}", font_size=20).next_to(plot_axes.x_axis.get_right(), DR, buff=0.05)
+        plot_ylabel = MathTex("I(x)", font_size=20).next_to(plot_axes.y_axis.get_top(), UL, buff=0.05)
+
+        y_slice_for_plot = 0 
+        indicator_curve = plot_axes.plot(
+            lambda x_val: get_indicator_value(np.array([x_val, y_slice_for_plot, 0])),
+            x_range=[-L, L],
+            color=YELLOW_D, use_smoothing=True 
+        )
+        # --- CORRECTED LINE FOR CURVE_LABEL ---
+        curve_label = Tex("$I(x,y_0)$", font_size=18, color=YELLOW_D).next_to(
+            indicator_curve, 
+            UR, # Direction is Upper-Right
+            buff=0.15 
+        )
+        # --- END CORRECTION ---
+
+        threshold_value_num = 0.35 
+        threshold_line_on_plot = plot_axes.plot(lambda x_val: threshold_value_num, x_range=[-L,L], color=RED_B, stroke_width=3.5)
+        threshold_label_on_plot = MathTex(f"T = {threshold_value_num}", font_size=20, color=RED_B)
+        threshold_label_on_plot.next_to(threshold_line_on_plot.get_right(), RIGHT, buff=0.1)
+
+        plot_group = VGroup(plot_axes, plot_xlabel, plot_ylabel, indicator_curve, curve_label, threshold_line_on_plot, threshold_label_on_plot)
+        plot_group.move_to(np.array([plot_group_target_x, plot_group_target_y, 0]))
+
+        self.play(
+            mesh_display_group.animate.scale(target_mesh_scale).move_to(target_mesh_position),
+            FadeIn(plot_group, shift=RIGHT * 0.2),
+            run_time=1.5
+        )
+        self.wait(0.5)
+
+
+        num_total_elements = len(mesh_elements.submobjects)
+        example_indices = []
+        if num_total_elements > 0:
+            num_fine_elements_per_quad = n_fine_divs**2
+            if num_fine_elements_per_quad > 0 : example_indices.append(num_fine_elements_per_quad // 2) 
+            if num_total_elements > 2 * num_fine_elements_per_quad:
+                 example_indices.append(2*num_fine_elements_per_quad + (n_coarse_divs**2 // 2) )
+            if not example_indices and num_total_elements > 0: 
+                 example_indices = [0, min(1, num_total_elements-1)] if num_total_elements > 1 else [0]
+
+        CLUSTER_COLOR, NON_CLUSTER_COLOR = ORANGE, BLUE_C
+        CLUSTER_OPACITY, NON_CLUSTER_OPACITY = 0.9, 0.25
+
+        for element_idx in example_indices:
+            if element_idx >= num_total_elements: continue 
+            element = mesh_elements.submobjects[element_idx]
+            value = get_indicator_value(element.get_center())
+            
+            original_stroke_color = element.get_stroke_color() 
+            original_stroke_width = element.get_stroke_width()
+
+            dot_on_plot = Dot(plot_axes.c2p(element.get_center()[0], value), color=YELLOW_A, radius=0.07)
+            
+            self.play(element.animate.set_stroke(YELLOW_A, width=4), Create(dot_on_plot), run_time=0.5)
+            
+            status_text_anims = []
+            element_final_anim = None
+            if value > threshold_value_num:
+                status_text_obj = MathTex("I > T", color=GREEN_B, font_size=20).next_to(dot_on_plot, UR, buff=0.05)
+                element_final_anim = element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.5)
+            else:
+                status_text_obj = MathTex("I \\le T", color=RED_C, font_size=20).next_to(dot_on_plot, DR, buff=0.05)
+                element_final_anim = element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5)
+            
+            self.play(Write(status_text_obj), Indicate(threshold_line_on_plot, color=WHITE, scale_factor=1.05), run_time=0.8)
+            if element_final_anim:
+                self.play(element_final_anim, run_time=0.7)
+            self.play(FadeOut(dot_on_plot), FadeOut(status_text_obj), 
+                      element.animate.set_stroke(original_stroke_color, width=original_stroke_width),
+                      run_time=0.5)
+        
+        final_element_animations = []
+        processed_example_elements = [mesh_elements.submobjects[i] for i in example_indices if i < num_total_elements]
+
+        for element in mesh_elements.submobjects:
+            if element in processed_example_elements: 
+                # Ensure its final state matches the last animation (if stroke was reset above)
+                value = get_indicator_value(element.get_center())
+                if value > threshold_value_num:
+                     final_element_animations.append(element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.5))
+                else:
+                     final_element_animations.append(element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5))
+                continue 
+
+            value = get_indicator_value(element.get_center())
+            if value > threshold_value_num:
+                final_element_animations.append(element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.0))
+            else:
+                final_element_animations.append(element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5))
+    
+        
+        self.wait(1.0)
+
+        # --- Fade Out All ---
+        self.play(*[FadeOut(mob) for mob in self.mobjects if mob is not None])
+        self.wait(0.5)
+
+
 class scena5(Scene):
     def construct(self):
         invisible = Text("invisible").to_corner(UP)
