@@ -34,3 +34,6 @@
 #latex stuff
 *.aux
 *.loc
+
+# Mac stuff
+.DS_Store
