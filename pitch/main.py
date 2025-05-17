@@ -230,3 +230,139 @@ class scene3(ThreeDScene):
         all_3d_elements = VGroup(axes, axes_labels, domain_boundary_3d, mesh_lines, solution_surface)
         self.play(FadeOut(all_3d_elements), run_time=1.5)
         self.wait(0.5)
+
+        class scene4(ThreeDScene):
+    def construct(self):
+        # === Part 1: Equation Display (Initial 2D Camera View) ===
+        self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
+        self.camera.frame_height = 8.0 # Standard viewing height
+
+        # 1. Title
+        title = Tex("Reaction-Diffusion Systems", font_size=48)
+        title.to_edge(UP, buff=0.7) # Position at the top
+        self.play(Write(title), run_time=1.5)
+        self.wait(0.3)
+
+        # 2. Heat Equation with Non-linear Reaction Term
+        # Using D for the diffusion coefficient
+        equation = MathTex(
+            r"\frac{\partial u}{\partial t} - D \Delta u + R(u) = f",
+            font_size=42
+        )
+        
+        # Initial and Boundary Conditions text
+        ic_text = MathTex(r"u(\mathbf{x}, 0) = u_0(\mathbf{x})", r"\quad (\text{Initial Condition})", font_size=36)
+        bc_text = MathTex(r"\text{+ Appropriate Boundary Conditions on } \partial\Omega", font_size=36)
+        
+        # Group equation and conditions, then position below title
+        equation_group = VGroup(equation, ic_text, bc_text).arrange(DOWN, buff=0.4, aligned_edge=LEFT)
+        equation_group.next_to(title, DOWN, buff=0.6)
+        
+        self.play(Write(equation), run_time=2.0)
+        self.wait(0.2)
+        self.play(Write(ic_text), run_time=1.5)
+        self.wait(0.2)
+        self.play(Write(bc_text), run_time=1.5)
+        self.wait(2.0) # Hold for viewing
+
+        # 3. Disappearance of text elements
+        text_elements_to_fade = VGroup(title, equation_group)
+        self.play(FadeOut(text_elements_to_fade, shift=UP * 0.3), run_time=1.0)
+        self.wait(0.5) # Pause before 3D part
+
+        # === Part 2: 3D Time-Dependent Wave ===
+        # Transition camera to a 3D perspective
+        self.move_camera(
+            phi=60 * DEGREES,       # Tilt
+            theta=-75 * DEGREES,    # Rotate
+            distance=16,            # Zoom out for a "big" grid view
+            run_time=2.0
+        )
+        # self.camera.frame_height = 9 # Optionally adjust frame height for new view
+
+        # Domain parameters for the square [-L, L] x [-L, L]
+        L = 2.0 
+
+        # 4. "Big" 3D Cartesian Grid
+        axes = ThreeDAxes(
+            x_range=[-L * 1.1, L * 1.1, L / 2],  # Extend ranges slightly beyond L
+            y_range=[-L * 1.1, L * 1.1, L / 2],
+            z_range=[-0.5, 1.5, 0.5],      # Adjust z_range to fit wave amplitude
+            x_length=7, y_length=7, z_length=4, # Visual size of axes
+            axis_config={"include_numbers": True, "font_size": 20, "include_tip": False},
+        )
+        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u(x,y,t)")
+        
+        # 5. Square domain on XY-plane (optional visual)
+        domain_square = Polygon(
+            axes.c2p(-L, -L, 0), axes.c2p(L, -L, 0),
+            axes.c2p(L, L, 0), axes.c2p(-L, L, 0),
+            color=BLUE_D, stroke_width=2.5, fill_opacity=0.1
+        )
+        
+        self.play(Create(axes), Write(axes_labels), Create(domain_square), run_time=2.0)
+        self.wait(0.5)
+
+        # 6. Time-dependent wave solution
+        time = ValueTracker(0) # This will track the current time 't' for the animation
+
+        # Define the wave function u(x, y, t_normalized)
+        # t_normalized will go from 0 to 1 during the animation.
+        def moving_gaussian_wave(x, y, t_normalized):
+            amplitude = 1.2
+            width_param = 0.6  # Controls the "spread" of the Gaussian pulse
+            
+            # Wave travels from x = -L (left) to x = +L (right) as t_normalized goes 0 to 1
+            # Start slightly off-screen and end slightly off-screen for smooth entry/exit
+            start_x_center = -L - 2 * width_param 
+            end_x_center = L + 2 * width_param
+            current_x_center = interpolate(start_x_center, end_x_center, t_normalized)
+            
+            center_y = 0 # Wave centered along y=0 for this example
+            
+            # Gaussian pulse shape
+            exponent = -(((x - current_x_center)**2 + (y - center_y)**2) / (2 * width_param**2))
+            return amplitude * np.exp(exponent)
+
+        # Create the Surface mobject. It will be updated based on `time.get_value()`.
+        solution_surface = Surface(
+            lambda u, v: axes.c2p(u, v, moving_gaussian_wave(u, v, time.get_value())),
+            u_range=[-L, L],  # Corresponds to x-axis domain
+            v_range=[-L, L],  # Corresponds to y-axis domain
+            resolution=(56, 56), # (nu, nv) - samples for smoothness
+            fill_opacity=0.75,
+            checkerboard_colors=[TEAL_D, PURPLE_D], # Colors for the surface
+            stroke_width=0.2,
+            stroke_color=BLACK
+        )
+
+        # Add an updater to the surface so it redraws each frame based on the 'time' ValueTracker
+        solution_surface.add_updater(
+            lambda mob: mob.become( # .become() regenerates the mobject
+                Surface(
+                    lambda u, v: axes.c2p(u, v, moving_gaussian_wave(u, v, time.get_value())),
+                    u_range=[-L, L], v_range=[-L, L],
+                    resolution=(56, 56), # Keep consistent resolution
+                    fill_opacity=0.75,
+                    checkerboard_colors=[TEAL_D, PURPLE_D],
+                    stroke_width=0.2, stroke_color=BLACK
+                )
+            )
+        )
+        
+        self.play(Create(solution_surface), run_time=1.0) # Initial appearance of the wave at t=0
+        
+        # Animate the wave by changing the 'time' ValueTracker from 0 to 1
+        animation_run_time = 7.0 # Duration of the wave movement animation
+        self.play(
+            time.animate.set_value(1), # Animate 'time' from its current value (0) to 1
+            run_time=animation_run_time,
+            rate_func=linear # Wave moves at a constant speed
+        )
+        self.wait(1.0) # Hold the final state of the wave
+
+        # Cleanup
+        all_3d_elements = VGroup(axes, axes_labels, domain_square, solution_surface)
+        self.play(FadeOut(all_3d_elements), run_time=1.5)
+        self.wait(0.5)
+
