@@ -1,0 +1,35 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\title{hp-adaptive pitch}
+\author{Pietro Fumagalli, Francesco Derme}
+
+\begin{document}
+\maketitle
+\noindent
+Hello everyone, I'm Pietro Fumagalli and with my colleague Francesco Derme we'll present our plan to build a C++,
+FEM-based, hp-adaptive PDE solver for multi-physics simulations, so let's dive into it. First of all, what's hp-adaptivity? 
+The idea is to harness the freedom granted by the discontinuous Galerkin FEM to modify h (the diameter of a mesh element) and p
+(the polynomial degree of the approximant on the element), and to do so independently among different elements.
+\newline
+\newline
+Let's consider the simple case of a Laplace equation on a polygonal mesh. We construct a uniform mesh to begin with and then
+locally refine or relax it depending on the expected behavior of the solution, so take a really small h and a small polynomial 
+degree p where the solution is more problematic and a big h coupled with a high polynomial degree where the solution is more benign.
+\newline
+\newline
+Now let's go a step further: consider a time-dependent heat equation with the addition of a non-linear reaction term, we want to employ
+the same technique. Of course, this comes with a major new difficulty: we have to estimate where the "wave fronts" are at a given time t,
+but we don't have the exact solution, so we'll define an indicator, say I(x), that varies over the mesh elements and predicts the behavior
+of the solution through a series of heuristics and then use a clustering algorithm on the values of I(x) to divide the mesh elements into 
+the group where the wave fronts are located and the group where they aren't, and this has to be done a-priori for each time step. After
+having predicted where the wave fronts are we need to refine the mesh in those particular elements, this poses a series of mathematically
+challenging question: what is the optimal way to split an element into smaller ones? How to choose the right h and p? How we can de-refine
+the mesh once the wave fronts have moved on?
+\newline
+\newline
+Now take all of this and consider it in a 3-d setting: here is where we find our direct applications. We'll apply this technique to wave
+equations that model the shocks that take place in the brain during an epileptic seizure. The hope is to create a reliable and computationally
+efficient approach to solve a very difficult problem in a complicated domain. 
+
+\end{document}
