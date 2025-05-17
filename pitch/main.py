@@ -1,4 +1,7 @@
 from manim import *
+import numpy as np
+import random
+import math
 
 class scene1(Scene):
     def construct(self):
@@ -68,8 +71,90 @@ class scene1(Scene):
         
         self.play(FadeOut(all_mesh_elements, scale=3.5), run_time=1.5)
 
+class scena2(Scene):
+    def construct(self):
+        h = Text("h", color=BLUE_C, font_size = 45).to_corner(UP)
+        p = Text("p", color=RED_C, font_size = 45).to_corner(UP)
+        x_position = config.frame_width / 4
+        h.move_to([-x_position, h.get_y(), 0])
+        p.move_to([x_position, p.get_y(), 0])
 
-import numpy as np
+        start_pos = [0, h.get_y(), 0]
+        end_pos = [0, -h.get_y(), 0]
+        middle_line = Line(start=start_pos, end=end_pos)
+
+        self.play(Write(h),
+                  Write(p),
+                  Create(middle_line),
+                  run_time = 1.5)
+
+        hexagon_size = 0.6
+        horizontal_spacing = 1.5 * hexagon_size
+        vertical_spacing = np.sqrt(3) * hexagon_size
+
+        num_rows = 4
+        num_cols = 4
+        hexagons_left = VGroup()
+        fine_mesh_lines = VGroup()
+        degrees = VGroup()
+
+        red_colors = [interpolate_color(RED_A, RED_E, alpha) for alpha in np.linspace(0, 1, 11)]
+
+        for i in range(num_rows):
+            for j in range(num_cols):
+                center_x = j * horizontal_spacing
+                center_y = i * vertical_spacing
+
+                if j % 2 == 1:
+                    center_y += vertical_spacing / 2
+
+                center = [center_x, center_y, 0]
+                hexagon = RegularPolygon(n=6, radius=hexagon_size, color = WHITE)
+                hexagon.move_to(center)
+                hexagons_left.add(hexagon)
+                
+                degree = random.randint(0, 10)
+                degree_str = str(degree)
+                degree_tex = Tex(degree_str, color = red_colors[degree])
+                degree_tex.move_to(center)
+                degrees.add(degree_tex)
+                
+                if random.random() < 0.5:
+                    vertices = hexagon.get_vertices()
+                    for k in range(len(vertices)):
+                        fine_mesh_lines.add(Line(center, vertices[k], color=BLUE_C, stroke_width=2))
+                        
+                        if k > 0 and random.random() < 0.25:
+                            fine_mesh_lines.add(Line(center, (vertices[k] + vertices[k-1])/2, color=BLUE_B, stroke_width=2))
+                
+        # We have to move hexagons_left and fine_mesh_lines
+        # together otherwise they might get misplaced
+        left_and_lines = VGroup()
+        left_and_lines.add(hexagons_left)
+        left_and_lines.add(fine_mesh_lines)
+        left_and_lines.move_to([-x_position, 0, 0])
+
+        hexagons_right = hexagons_left.copy()
+        hexagons_right.move_to([x_position, 0, 0])
+        degrees.move_to([x_position, 0, 0])
+
+        self.play(LaggedStart(
+            Create(hexagons_left, lag_ratio=0.15),
+                  Create(hexagons_right, lag_ratio=0.15),
+                  lag_ratio = 0.2,
+                  run_time = 2
+        ))
+
+        self.play(LaggedStart(
+            Create(fine_mesh_lines), lag_ratio = 0.3),
+            Write(degrees),
+            lag_ratio = 0.2,
+            run_time = 7.5
+        )
+        
+        all_objects = VGroup(*self.mobjects)
+        self.play(all_objects.animate.shift(UP).fade(1))
+        self.wait(2)
 
 class scene3(ThreeDScene):
     def construct(self):
@@ -231,7 +316,7 @@ class scene3(ThreeDScene):
         self.play(FadeOut(all_3d_elements), run_time=1.5)
         self.wait(0.5)
 
-        class scene4(ThreeDScene):
+class scene4(ThreeDScene):
     def construct(self):
         # === Part 1: Equation Display (Initial 2D Camera View) ===
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
@@ -366,3 +451,150 @@ class scene3(ThreeDScene):
         self.play(FadeOut(all_3d_elements), run_time=1.5)
         self.wait(0.5)
 
+class scena5(Scene):
+    def construct(self):
+        invisible = Text("invisible").to_corner(UP)
+        x_delta = config.frame_width / 6
+        start_pos_l = [-x_delta, invisible.get_y(), 0]
+        end_pos_l = [-x_delta, -invisible.get_y(), 0]
+        start_pos_r = [x_delta, invisible.get_y(), 0]
+        end_pos_r = [x_delta, -invisible.get_y(), 0]
+        left_line = Line(start=start_pos_l, end=end_pos_l)
+        right_line = Line(start=start_pos_r, end=end_pos_r)
+
+        t1 = Text("Shape optimality", color=BLUE_C, font_size = 34).to_corner(UP)
+        t2 = Text("Optimal degree", color=RED_C, font_size = 34)
+        t3 = Text("Derefinement", color=GREEN_C, font_size = 34)
+
+        t1.move_to([-2*x_delta, t1.get_y(), 0])
+        t2.move_to([0, t1.get_y(), 0])
+        t3.move_to([2*x_delta, t1.get_y(), 0])
+
+        self.play(Create(left_line),
+                  Create(right_line),
+                  Write(t1),
+                  Write(t2),
+                  Write(t3),
+                  run_time = 2.5)
+        
+        pentagon = RegularPolygon(n=5, radius=1.2, color = WHITE).move_to([-2*x_delta, 0, 0])
+        baseline = Line([-1.5, pentagon.get_bottom()[1], 0], [1.5, pentagon.get_bottom()[1], 0], color=WHITE)
+
+        big_square_size = 2.5
+        bigsquare = Square(side_length=big_square_size, color=WHITE)
+        bigsquare.move_to([2*x_delta, big_square_size/2 + pentagon.get_bottom()[1], 0])
+
+        num_divisions = 4
+        square_lines = VGroup()
+        small_square_side = bigsquare.side_length / num_divisions
+
+        for i in range(num_divisions-1):
+            delta = (i + 1) * small_square_side
+            square_line = Line([bigsquare.get_left()[0] + delta, bigsquare.get_top()[1], 0],
+                               [bigsquare.get_left()[0] + delta, bigsquare.get_bottom()[1], 0],
+                               color = WHITE)
+            square_lines.add(square_line)
+            square_line = Line([bigsquare.get_left()[0], bigsquare.get_bottom()[1] + delta, 0],
+                               [bigsquare.get_right()[0], bigsquare.get_bottom()[1] + delta, 0],
+                               color = WHITE)
+            square_lines.add(square_line)
+
+        self.play(Create(pentagon),
+                  Create(baseline),
+                  Create(bigsquare),
+                  Create(square_lines),
+                  run_time = 3)
+        
+        square_size = 2.4*math.sin(math.pi/5)
+        square = Square(side_length=square_size, color=WHITE)
+        square.move_to([-2*x_delta, square_size/2 + pentagon.get_bottom()[1], 0])
+
+        square_vert = square.get_vertices()
+        penta_vert = pentagon.get_vertices()
+
+        # Vertices are ordered counter-clockwise from the top
+        line1_1 = Line(square_vert[1], penta_vert[1], color=BLUE_A)
+        line1_2 = Line(square_vert[1], penta_vert[0], color=BLUE_A)
+        line1_3 = Line(square_vert[0], penta_vert[0], color=BLUE_A)
+        line1_4 = Line(square_vert[0], penta_vert[4], color=BLUE_A)
+
+        mesh_refinement1 = VGroup()
+        mesh_refinement1.add(square)
+        mesh_refinement1.add(line1_1)
+        mesh_refinement1.add(line1_2)
+        mesh_refinement1.add(line1_3)
+        mesh_refinement1.add(line1_4)
+
+        def poly1(x):
+            return x
+        def poly2(x):
+            return x**2
+        def poly3(x):
+            return x**3
+        
+        axes = Axes(
+            x_range=[-1.8, 1.8, 0.1], 
+            y_range=[0, 5, 0.1],
+            tips=False
+        ).scale(0.25).move_to([0, pentagon.get_y(), 0] + UP/2)
+
+        indexes = random.sample(range(0, len(square_lines)), 3)
+        dashed_1 = DashedLine(square_lines[indexes[0]].get_start(), square_lines[indexes[0]].get_end(), dashed_ratio=0.5, color = GREEN_C)
+
+        x_range = [-1.8, 1.8]
+        self.play(Create(mesh_refinement1),
+                  Create(axes.plot(poly1, x_range=x_range, color=RED_A)),
+                  FadeOut(square_lines[indexes[0]]),
+                  Create(dashed_1),
+            run_time = 3)
+        
+        center = pentagon.get_center()
+        line2_1 = Line(center, penta_vert[0], color=BLUE_B)
+        line2_2 = Line(center, penta_vert[1], color=BLUE_B)
+        line2_3 = Line(center, penta_vert[2], color=BLUE_B)
+        line2_4 = Line(center, penta_vert[3], color=BLUE_B)
+        line2_5 = Line(center, penta_vert[4], color=BLUE_B)
+
+        mesh_refinement2 = VGroup()
+        mesh_refinement2.add(line2_1)
+        mesh_refinement2.add(line2_2)
+        mesh_refinement2.add(line2_3)
+        mesh_refinement2.add(line2_4)
+        mesh_refinement2.add(line2_5)
+
+        dashed_2 = DashedLine(square_lines[indexes[1]].get_start(), square_lines[indexes[1]].get_end(), dashed_ratio=0.5, color = GREEN_C)
+
+        self.play(Transform(mesh_refinement1, mesh_refinement2),
+                  Create(axes.plot(poly2, x_range=x_range, color=RED_B)),
+                  FadeOut(square_lines[indexes[1]]),
+                  Create(dashed_2),
+            run_time = 3)
+        
+        pentagon2 = RegularPolygon(n=5, radius=0.6, color = BLUE_C).move_to([-2*x_delta, 0, 0])
+        penta_vert2 = pentagon2.get_vertices()
+
+        line3_1 = Line(penta_vert[0], penta_vert2[0], color=BLUE_C)
+        line3_2 = Line(penta_vert[1], penta_vert2[1], color=BLUE_C)
+        line3_3 = Line(penta_vert[2], penta_vert2[2], color=BLUE_C)
+        line3_4 = Line(penta_vert[3], penta_vert2[3], color=BLUE_C)
+        line3_5 = Line(penta_vert[4], penta_vert2[4], color=BLUE_C)
+
+        mesh_refinement3 = VGroup()
+        mesh_refinement3.add(pentagon2)
+        mesh_refinement3.add(line3_1)
+        mesh_refinement3.add(line3_2)
+        mesh_refinement3.add(line3_3)
+        mesh_refinement3.add(line3_4)
+        mesh_refinement3.add(line3_5)
+
+        dashed_3 = DashedLine(square_lines[indexes[2]].get_start(), square_lines[indexes[2]].get_end(), dashed_ratio=0.5, color = GREEN_C)
+
+        self.play(Transform(mesh_refinement1, mesh_refinement3),
+                  Create(axes.plot(poly3, x_range=x_range, color=RED_C)),
+                  FadeOut(square_lines[indexes[2]]),
+                  Create(dashed_3),
+            run_time = 3)
+        
+        all_objects = VGroup(*self.mobjects)
+        self.play(all_objects.animate.shift(UP).fade(1))
+        self.wait(2)
