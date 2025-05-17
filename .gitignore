@@ -33,7 +33,7 @@
 
 #latex stuff
 *.aux
-*.loc
+*.log
 
 # Mac stuff
 .DS_Store
