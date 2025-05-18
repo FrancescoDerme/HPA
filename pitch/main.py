@@ -10,8 +10,8 @@ class scene1(Scene):
         self.play(Write(title_text), run_time=2)
         self.wait(0.5)
 
-        pietro = Text("Pietro Fumagalli", font_size=25, color=BLUE_C).shift(1.5 * LEFT + 0.5 * DOWN)
-        francesco = Text("Francesco Derme", font_size=25, color=BLUE_C).shift(1.5 * RIGHT + 0.5 * DOWN)
+        pietro = Text("Pietro Fumagalli", font_size=30, color=BLUE_C).shift(1.8 * LEFT + 0.5 * DOWN)
+        francesco = Text("Francesco Derme", font_size=30, color=BLUE_C).shift(1.8 * RIGHT + 0.5 * DOWN)
 
         self.play(Write(pietro), 
                   Write(francesco),
@@ -158,13 +158,14 @@ class scena2(Scene):
 
         self.play(LaggedStart(
             Create(hexagons_left, lag_ratio=0.15),
-                  Create(hexagons_right, lag_ratio=0.15),
-                  lag_ratio = 0.2,
-                  run_time = 2
+            Create(hexagons_right, lag_ratio=0.15),
+            run_time = 2,
+            lag_ratio = 0.3,
         ))
 
         self.play(LaggedStart(
-            Create(fine_mesh_lines), lag_ratio = 0.3),
+            *[Create(line) for line in fine_mesh_lines],
+            lag_ratio=0.2),
             Write(degrees),
             lag_ratio = 0.2,
             run_time = 6.5
@@ -181,8 +182,7 @@ class scene3(ThreeDScene):
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
         self.camera.frame_height = 8.5
 
-        title = Text("A first example: the Laplacian", font_size=40).to_edge(UP)
-        #self.add_fixed_in_frame_mobjects(title)
+        title = Text("A first example: the Laplacian", font_size=40).to_edge(UP).shift(DOWN * 0.5)
         self.play(Write(title), run_time=1.5)
         self.wait(0.5)
 
@@ -199,7 +199,7 @@ class scene3(ThreeDScene):
         boundary_expr = MathTex(
             r"""\text{Let } \Omega = (-L, L)^2, \partial\Omega = \bigcup_{i=1}^4 \Gamma_i \text{ where:}""",
             font_size=40
-        ).next_to(laplace_eq_system, DOWN, buff=0.5)
+        ).next_to(laplace_eq_system, 3 * DOWN)
 
         self.play(Write(boundary_expr), run_time=2)
         
@@ -209,7 +209,7 @@ class scene3(ThreeDScene):
                 \Gamma_2 &= \{ (-L, y)  &&\mid -L \le y \le L \}
             \end{alignedat}""",
             font_size=40
-        ).next_to(boundary_expr, DOWN, buff=0.5)
+        ).next_to(boundary_expr, DOWN, buff = 0.5)
 
         boundary_details_2 = MathTex(            
             r"""\begin{alignedat}{2}
@@ -217,12 +217,12 @@ class scene3(ThreeDScene):
                 \Gamma_4 &= \{ (x, -L)  &&\mid -L \le x \le L \}
             \end{alignedat}""",
             font_size=40
-        ).next_to(boundary_details_1, DOWN, buff=0.5)
+        ).next_to(boundary_details_1, DOWN)
      
         self.play(
             Write(boundary_details_1),
             Write(boundary_details_2),
-            run_time=3)
+            run_time=2)
         self.wait(2.0)
 
         text_elements = VGroup(title, laplace_eq_system, boundary_expr,
@@ -231,113 +231,146 @@ class scene3(ThreeDScene):
 
         L_val = 1.0
         axes = ThreeDAxes(
-            x_range=[-L_val*1.2, L_val*1.2, L_val/2], 
-            y_range=[-L_val*1.2, L_val*1.2, L_val/2], 
-            z_range=[-0.3, 1.3, 0.2],
+            x_range=[-L_val*1.2, L_val*1.2, 0.2], 
+            y_range=[-L_val*1.2, L_val*1.2, 0.2], 
+            z_range=[-0.5, 1.5, 0.2],
             x_length=5.5, y_length=5.5, z_length=3.8,
-            axis_config={"include_numbers": False, "font_size": 18, "include_tip": False},
-        )
+            axis_config={"include_numbers": False, "font_size": 18, "include_tip": True},
+        ).shift(1.5 * LEFT + 2.5 * DOWN)
 
-        self.begin_ambient_camera_rotation(40*DEGREES, about='phi')
-        self.begin_ambient_camera_rotation(25*DEGREES, about='theta')
+        square = Square(side_length=4).shift(3.5 * RIGHT)
+        half_side = square.side_length / 2
+
+        vert_middle = Line([square.get_left()[0] + half_side, square.get_top()[1], 0],
+                           [square.get_left()[0] + half_side, square.get_bottom()[1], 0],
+                           color = WHITE)
+        horiz_middle = Line([square.get_left()[0], square.get_top()[1] - half_side, 0],
+                            [square.get_right()[0], square.get_top()[1] - half_side, 0],
+                            color = WHITE)
+        
+        square_and_mid = VGroup(square, vert_middle, horiz_middle)
+        self.add_fixed_in_frame_mobjects(square_and_mid)
+
+        self.begin_ambient_camera_rotation(30*DEGREES, about='phi')
+        self.begin_ambient_camera_rotation(20*DEGREES, about='theta')
         axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
-        self.play(Create(axes),
-                  Write(axes_labels),
-                  run_time=1.5)
+        self.play(LaggedStart(
+            Create(axes),
+            Write(axes_labels),
+            Create(square_and_mid),
+            lag_ratio = 0.2,
+            run_time=2))
         self.stop_ambient_camera_rotation(about='phi')
         self.stop_ambient_camera_rotation(about='theta')
 
-        domain_boundary_3d = Polygon(
-            axes.c2p(-L_val, -L_val, 0), axes.c2p(L_val, -L_val, 0),
-            axes.c2p(L_val, L_val, 0), axes.c2p(-L_val, L_val, 0),
-            color=YELLOW_C, stroke_width=4, fill_opacity=0
-        )
-        self.play(Create(domain_boundary_3d), run_time=1.0)
-        self.wait(0.3)
+        divisions_per_quadrant = 4
+        square_lines = VGroup()
+        coarse_square_side = half_side / divisions_per_quadrant
+        fine_square_side = coarse_square_side / 2
 
-        # 5c. Non-homogeneous mesh lines
-        mesh_lines = VGroup()
-        mesh_lines.add(Line(axes.c2p(-L_val, 0, 0), axes.c2p(L_val, 0, 0), stroke_color=GREY_B, stroke_width=1.5)) # x-axis line
-        mesh_lines.add(Line(axes.c2p(0, -L_val, 0), axes.c2p(0, L_val, 0), stroke_color=GREY_B, stroke_width=1.5)) # y-axis line
+        colored_squares = VGroup()
+        colors = [interpolate_color(RED_C, BLUE_C, alpha) for alpha in np.linspace(0, 1, 10)]
 
-        fine_step = L_val / 8.0
-        coarse_step = L_val / 2.0
+        def add_lines_and_squares(num, side, up_to_down, stroke_width):
+            for i in range(num):
+                delta = (i + 1) * side
+                left = square.get_left()[0]
+                top = square.get_top()[1]
 
-        # Bottom-left quadrant (x from -L to 0, y from -L to 0) -> FINE MESH
-        for i in range(1, int(L_val / fine_step)): # From 1 to exclude boundary lines already in domain_boundary_3d or central lines
-            x_coord_bl = -L_val + i * fine_step
-            y_coord_bl = -L_val + i * fine_step
-            if x_coord_bl < 0: # strictly within the -L to 0 part for x
-                 mesh_lines.add(Line(axes.c2p(x_coord_bl, -L_val, 0), axes.c2p(x_coord_bl, 0, 0), stroke_color=WHITE, stroke_width=1.2))
-            if y_coord_bl < 0: # strictly within the -L to 0 part for y
-                 mesh_lines.add(Line(axes.c2p(-L_val, y_coord_bl, 0), axes.c2p(0, y_coord_bl, 0), stroke_color=WHITE, stroke_width=1.2))
-        
-        # Other quadrants (coarser) - example for Top-Right (x from 0 to L, y from 0 to L)
-        for i in range(1, int(L_val / coarse_step)):
-            x_coord_tr = 0 + i * coarse_step
-            y_coord_tr = 0 + i * coarse_step
-            if x_coord_tr < L_val:
-                mesh_lines.add(Line(axes.c2p(x_coord_tr, 0, 0), axes.c2p(x_coord_tr, L_val, 0), stroke_color=WHITE, stroke_width=1.2))
-            if y_coord_tr < L_val:
-                mesh_lines.add(Line(axes.c2p(0, y_coord_tr, 0), axes.c2p(L_val, y_coord_tr, 0), stroke_color=WHITE, stroke_width=1.2))
-        # Note: You can fill in the other two quadrants (bottom-right, top-left) with coarse lines similarly.
-        # This example just shows one fine and one coarse quadrant explicitly defined beyond the central lines.
+                if up_to_down == -1:
+                    top -= half_side
 
-        self.play(Create(mesh_lines, lag_ratio=0.1), run_time=2.5)
-        self.wait(0.5)
+                if i != num-1:
+                    # Vertical
+                    square_line = Line([left + delta, top, 0], [left + delta, top - half_side, 0],
+                                    color = WHITE, stroke_width = stroke_width)
+                    square_lines.add(square_line)
+                    # Horizontal
+                    square_line = Line([left, top - delta, 0], [left + half_side, top - delta, 0],
+                                    color = WHITE, stroke_width = stroke_width)
+                    square_lines.add(square_line)
+                    # Vertical shifted
+                    square_line = Line([left + half_side + delta, top - up_to_down * half_side, 0],
+                                    [left + half_side + delta, top - half_side - up_to_down * half_side, 0],
+                                    color = WHITE, stroke_width = stroke_width)
+                    square_lines.add(square_line)
+                    # Horizontal shifted
+                    square_line = Line([left + half_side, top - delta - up_to_down * half_side, 0],
+                                    [left + 2 * half_side, top - delta - up_to_down * half_side, 0],
+                                    color = WHITE, stroke_width = stroke_width)
+                    square_lines.add(square_line)
 
-        # 5d. Solution Plot with modified behavior
+                for j in range(num):
+                    colored_square = Square(side_length=side)
+                    colored_square.move_to([left + j * side + side/2, top - i * side - side/2, 0])
+                    colored_square.set_stroke(width=0)
+                    colored_square.set_fill(color=colors[random.randint(0, 9)], opacity=0.85)
+                    colored_squares.add(colored_square)
+
+                    colored_square = Square(side_length=side)
+                    colored_square.move_to([left + j * side + side/2 + half_side,
+                                            top - i * side - side/2 - up_to_down * half_side, 0])
+                    colored_square.set_stroke(width=0)
+                    colored_square.set_fill(color=colors[random.randint(0, 9)], opacity=0.85)
+                    colored_squares.add(colored_square)
+
+        add_lines_and_squares(divisions_per_quadrant, coarse_square_side, 1, 3)
+        add_lines_and_squares(2*divisions_per_quadrant, fine_square_side, -1, 1.5)
+
+        self.add_fixed_in_frame_mobjects(square_lines)
+        self.add_fixed_in_frame_mobjects(colored_squares)
+
         def piecewise_solution_func(x, y):
-            peak_amplitude = 0.9 # Max height of peaks
-            sigma_peak = L_val * 0.20 # Sharpness of peaks
-            oscillation_freq = 18 / L_val # For "problematic" oscillations
-            oscillation_amplitude_factor = 0.3 # Factor for oscillation height relative to peak
-            constant_value_coarse = 0.1 # Value for constant regions
+            return math.sin(math.pi*x) * math.sin(math.pi*y) * math.exp(-7.5 * (x - y) * (x-y))
+        
+        surface_options = {
+            "fill_opacity": 0.85,
+            "checkerboard_colors": [BLUE_E, BLUE_C],
+            "stroke_color": BLACK,
+            "stroke_width": 0.1
+        }
 
-            val = constant_value_coarse # Default for coarse regions (TL, BR)
-
-            # Bottom-Left: "Problematic" (peak with oscillations)
-            if x <= 0.001 and y <= 0.001: # (x <= 0 and y <= 0) with tolerance
-                center_x, center_y = -L_val * 0.6, -L_val * 0.6
-                dist_sq = (x - center_x)**2 + (y - center_y)**2
-                gaussian_shape = np.exp(-dist_sq / (2 * sigma_peak**2))
-                oscillations = np.sin(oscillation_freq * x) * np.cos(oscillation_freq * y)
-                val = peak_amplitude * gaussian_shape * (1 + oscillation_amplitude_factor * oscillations)
-            
-            # Top-Right: "Problematic" (peak with different oscillations)
-            elif x > -0.001 and y > -0.001: # (x > 0 and y > 0) with tolerance
-                center_x, center_y = L_val * 0.6, L_val * 0.6
-                dist_sq = (x - center_x)**2 + (y - center_y)**2
-                gaussian_shape = np.exp(-dist_sq / (2 * sigma_peak**2))
-                oscillations = np.cos(oscillation_freq * x) * np.sin(oscillation_freq * y * 1.2) # Slightly different pattern
-                val = peak_amplitude * gaussian_shape * (1 + oscillation_amplitude_factor * oscillations)
-            
-            # TL (x<=0, y>0) and BR (x>0, y<=0) regions will use constant_value_coarse
-            
-            return val
-
-        solution_surface = Surface(
+        solution_BL = Surface(
             lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
-            u_range=[-L_val, L_val], v_range=[-L_val, L_val],
-            resolution=(72, 72), # Higher resolution for detail
-            fill_opacity=0.85,
-            # Colors that might show detail well
-            # Using a colormap can also be an option via set_shader_input
-            checkerboard_colors=[BLUE_E, BLUE_C], 
-            stroke_color=BLACK,
-            stroke_width=0.1
+            u_range=[-L_val, 0], v_range=[-L_val, 0],
+            resolution=(18, 18),
+            **surface_options
         )
-        self.play(Create(solution_surface), run_time=4.0) # Longer time for complex surface
-        self.wait(4.0) # Hold the final plot longer
+        solution_BR = Surface(
+            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
+            u_range=[0, L_val], v_range=[-L_val, 0],
+            resolution=(9, 9),
+            **surface_options 
+        )
+        solution_TL = Surface(
+            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
+            u_range=[-L_val, 0], v_range=[0, L_val],
+            resolution=(9, 9),
+            **surface_options
+        )
+        solution_TR = Surface(
+            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
+            u_range=[0, L_val], v_range=[0, L_val],
+            resolution=(18, 18),
+            **surface_options 
+        )
+        
+        solution = VGroup(solution_BL, solution_BR, solution_TL, solution_TR)
 
-        # No specific text label for problematic regions as per request.
-        # The visual difference in the surface itself is the cue.
+        self.play(
+            Create(solution),
+            Create(colored_squares),
+            Create(square_lines),
+            run_time=5.0)
+        self.wait(4.0)
 
-        # Cleanup
-        all_3d_elements = VGroup(axes, axes_labels, domain_boundary_3d, mesh_lines, solution_surface)
-        self.play(FadeOut(all_3d_elements), run_time=1.5)
+        all_3d_objects = VGroup(axes, axes_labels, solution)
+        all_2d_objects = VGroup(square_and_mid, square_lines, colored_squares)
+        self.play(FadeOut(all_3d_objects, shift=OUT*0.5),
+                  FadeOut(all_2d_objects, shift=UP*0.5),
+                  run_time=1.0)
         self.wait(0.5)
-
+        
 class scene4(ThreeDScene):
     def construct(self):
         # === Part 1: Equation Display (Initial 2D Camera View) ===
