@@ -5,71 +5,89 @@ import math
 
 class scene1(Scene):
     def construct(self):
+        title_text = Tex("hp-adaptive strategies for high-fidelity multi-physics simulations",
+                         font_size=40, color=WHITE)
+        self.play(Write(title_text), run_time=2)
+        self.wait(0.5)
 
-        title_text = Tex("hp-adaptive strategies for high-fidelity multi-physics simulations", font_size=35, color=WHITE)
-        self.play(Write(title_text), run_time=3) # Corresponds to "we'll present our plan to build a"
-        self.wait(0.8) # Hold the title for a moment
+        pietro = Text("Pietro Fumagalli", font_size=25, color=BLUE_C).shift(1.5 * LEFT + 0.5 * DOWN)
+        francesco = Text("Francesco Derme", font_size=25, color=BLUE_C).shift(1.5 * RIGHT + 0.5 * DOWN)
 
-        # --- Author Names (0.5s - 3.0s) ---
-        authors_name = Text("Pietro Fumagalli       Francesco Derme", font_size=25, color=BLUE_C)
-        authors_group = VGroup(authors_name).arrange(RIGHT, buff=0.25)
-        authors_group.move_to(DOWN*0.7) # Positioned below the title
+        self.play(Write(pietro), 
+                  Write(francesco),
+                  run_time=1.5)
+        
+        self.wait(2)
 
-        self.play(Write(authors_name), run_time=2) # Corresponds to "I'm Pietro Fumagalli"
-        self.wait(0.2) # slight pause before Francesco's name
-
-        # --- Transition to Plan (3.0s - 3.5s) ---
-        # Authors and hello shift up to make space
-        main_titles_group = VGroup(title_text, authors_group)
-
+        main_titles_group = VGroup(title_text, pietro, francesco)
         self.play(FadeOut(main_titles_group, shift=UP*0.5), run_time=1.0)
         self.wait(0.2)
 
-        # 2. Domain Boundary Appears (Using a hexagon as the domain Omega)
-        domain_boundary = RegularPolygon(n=6, radius=1.7, color=BLUE_D, stroke_width=4)
-        domain_boundary.move_to(ORIGIN)
-        self.play(Create(domain_boundary), run_time=1.0)
+        hexagons = VGroup()
+        nrows = 3
+        ncols = 6
+        radius = 2
+        startx = -config.frame_width/2
+        starty = config.frame_height/2
+
+        for i in range(nrows):
+            for j in range(ncols):
+                deltax = j * radius * 1.5
+                deltay = -i * math.sqrt(3) * 2
+
+                if j%2==1:
+                    deltay -= radius * 0.5 * math.sqrt(3)
+
+                hexagon = RegularPolygon(n=6, radius=radius, color=WHITE,
+                                         stroke_width=4,
+                                         stroke_opacity=random.random())
+                hexagon.move_to([startx + deltax, starty + deltay, 0])
+                hexagons.add(hexagon)
+
+        self.play(LaggedStart(
+            *[Create(hexagon) for hexagon in hexagons],
+            lag_ratio=0.2),
+            runt_time = 2.5)
         self.wait(0.5)
 
-        # 3. Coarse Mesh Lines Appear
-        # These lines will divide the hexagon into 6 large triangular elements.
-        center = domain_boundary.get_center()
-        vertices = domain_boundary.get_vertices()
-        
         coarse_mesh_lines = VGroup()
-        for vertex in vertices:
-            coarse_mesh_lines.add(Line(center, vertex, color=WHITE, stroke_width=2.5))
+        indexes = [0, 5, 7, 8, 16]
+        for ind in indexes:
+            center = hexagons[ind].get_center()
+            vertices = hexagons[ind].get_vertices()
+            for vertex in vertices:
+                coarse_mesh_lines.add(Line(center, vertex, color=BLUE_C, stroke_width=2.5))
         
-        self.play(Create(coarse_mesh_lines), run_time=1.0)
+        self.play(LaggedStart(
+            *[Create(line) for line in coarse_mesh_lines],
+            lag_ratio=0.2),
+            run_time=2.0)
         self.wait(0.5)
 
-        # 4. Fine Mesh Lines Appear (Refinement of the coarse triangular elements)
-        # Each large triangle will be subdivided into 4 smaller triangles.
         fine_mesh_lines = VGroup()
-        for i in range(6):
-            # Vertices of the current coarse triangle: center, vertices[i], vertices[(i+1)%6]
-            v0 = center
-            v1 = vertices[i]
-            v2 = vertices[(i + 1) % 6] # Ensures the last vertex connects to the first
-
-            # Midpoints of the edges of this coarse triangle
-            m01 = (v0 + v1) / 2  # Midpoint of line from center to vertex i
-            m12 = (v1 + v2) / 2  # Midpoint of outer edge
-            m02 = (v0 + v2) / 2  # Midpoint of line from center to vertex i+1
-
-            # Lines connecting these midpoints form the refinement
-            fine_mesh_lines.add(Line(m01, m12, color=YELLOW_C, stroke_width=1.5))
-            fine_mesh_lines.add(Line(m12, m02, color=YELLOW_C, stroke_width=1.5))
-            fine_mesh_lines.add(Line(m02, m01, color=YELLOW_C, stroke_width=1.5))
+        indexes = [8, 16]
+        for ind in indexes:
+            center = hexagons[ind].get_center()
+            vertices = hexagons[ind].get_vertices()
+            for i in range(6):
+                v1 = vertices[i]
+                v2 = vertices[(i + 1) % 6]
+                m01 = (center + v1) / 2
+                m12 = (v1 + v2) / 2 
+                m02 = (center + v2) / 2
+                fine_mesh_lines.add(DashedLine(m01, m12, dashed_ratio=0.5, color = GREEN_C, stroke_width=1.5))
+                fine_mesh_lines.add(DashedLine(m12, m02, dashed_ratio=0.5, color = GREEN_C, stroke_width=1.5))
+                fine_mesh_lines.add(DashedLine(m02, m01, dashed_ratio=0.5, color = GREEN_C, stroke_width=1.5))
         
-        # Animate the appearance of these finer mesh lines
-        self.play(LaggedStart(*[Create(line) for line in fine_mesh_lines], lag_ratio=0.05), run_time=2.0)
+        self.play(LaggedStart(
+            *[Create(line) for line in fine_mesh_lines],
+            lag_ratio=0.05),
+            run_time=2.0)
+        self.wait(2)
+        
+        all_objects = VGroup(hexagons, coarse_mesh_lines, fine_mesh_lines)
+        self.play(FadeOut(all_objects, shift=UP*0.5), run_time=1.0)
         self.wait(0.5)
-        
-        # Group all mesh lines for the fade-out animation
-        all_mesh_elements = VGroup(domain_boundary, coarse_mesh_lines, fine_mesh_lines)
-        
-        self.play(FadeOut(all_mesh_elements, scale=3.5), run_time=1.5)
 
 class scena2(Scene):
     def construct(self):
@@ -149,82 +167,86 @@ class scena2(Scene):
             Create(fine_mesh_lines), lag_ratio = 0.3),
             Write(degrees),
             lag_ratio = 0.2,
-            run_time = 7.5
+            run_time = 6.5
         )
         
-        all_objects = VGroup(*self.mobjects)
-        self.play(all_objects.animate.shift(UP).fade(1))
-        self.wait(2)
+        self.wait(2.5)
+        all_objects = VGroup(hexagons_left, hexagons_right, h, p, middle_line,
+                             fine_mesh_lines, degrees)
+        self.play(FadeOut(all_objects, shift=UP*0.5), run_time=1.0)
+        self.wait(0.5)
 
 class scene3(ThreeDScene):
     def construct(self):
-        # === Part 1: Title, Equation, and Boundary Description (2D Camera View) ===
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
         self.camera.frame_height = 8.5
 
-        # 1. Title
-        title = Tex("A first example: the Laplacian", font_size=46)
-        title.move_to(ORIGIN)
-        self.play(FadeIn(title, scale=0.7), run_time=1.0)
-        self.play(title.animate.scale(0.9).to_edge(UP, buff=0.4), run_time=1.0)
-        self.wait(0.2)
+        title = Text("A first example: the Laplacian", font_size=40).to_edge(UP)
+        #self.add_fixed_in_frame_mobjects(title)
+        self.play(Write(title), run_time=1.5)
+        self.wait(0.5)
 
-        # 2. Laplace Equation System (No Neumann condition)
         laplace_eq_system = MathTex(
             r"""\begin{cases}
                 -\Delta u(\mathbf{x}) = f(\mathbf{x}) & \mathbf{x} \in \Omega \\
                 u(\mathbf{x}) = g(\mathbf{x}) & \mathbf{x} \in \partial\Omega 
-            \end{cases}""", # Using dOmega for general Dirichlet BC
-            font_size=38
+            \end{cases}""",
+            font_size=40
         ).next_to(title, DOWN, buff=0.35)
-        self.play(Write(laplace_eq_system), run_time=2.5) # Adjusted runtime
-        self.wait(0.2)
 
-        # 3. Explicit Boundary Expression for a Square Domain (Centered)
-        L_char = "L"
+        self.play(Write(laplace_eq_system), run_time=2.5)
+
         boundary_expr = MathTex(
-            r"""\text{For } \Omega = (-""" + L_char + r""", """ + L_char + r""")^2 \text{, the boundary } \partial\Omega = \bigcup_{i=1}^4 \Gamma_i \text{ is:}""",
-            font_size=30 # Smaller font for this detailed part
-        )
-        # Position it centered below the Laplace equation system
-        boundary_expr.next_to(laplace_eq_system, DOWN, buff=0.5)
+            r"""\text{Let } \Omega = (-L, L)^2, \partial\Omega = \bigcup_{i=1}^4 \Gamma_i \text{ where:}""",
+            font_size=40
+        ).next_to(laplace_eq_system, DOWN, buff=0.5)
 
-        boundary_details = MathTex(            
+        self.play(Write(boundary_expr), run_time=2)
+        
+        boundary_details_1 = MathTex(            
             r"""\begin{alignedat}{2}
-                \Gamma_1 &= \{ (""" + L_char + r""", y)   &&\mid -""" + L_char + r""" \le y \le """ + L_char + r""" \} \\
-                \Gamma_2 &= \{ (-""" + L_char + r""", y)  &&\mid -""" + L_char + r""" \le y \le """ + L_char + r""" \} \\
-                \Gamma_3 &= \{ (x, """ + L_char + r""")   &&\mid -""" + L_char + r""" \le x \le """ + L_char + r""" \} \\
-                \Gamma_4 &= \{ (x, -""" + L_char + r""")  &&\mid -""" + L_char + r""" \le x \le """ + L_char + r""" \}
+                \Gamma_1 &= \{ (L, y)   &&\mid -L \le y \le L \}, \text{ }
+                \Gamma_2 &= \{ (-L, y)  &&\mid -L \le y \le L \}
             \end{alignedat}""",
-            font_size=30
-        )
+            font_size=40
+        ).next_to(boundary_expr, DOWN, buff=0.5)
+
+        boundary_details_2 = MathTex(            
+            r"""\begin{alignedat}{2}
+                \Gamma_3 &= \{ (x, L)   &&\mid -L \le x \le L \}, \text{ }
+                \Gamma_4 &= \{ (x, -L)  &&\mid -L \le x \le L \}
+            \end{alignedat}""",
+            font_size=40
+        ).next_to(boundary_details_1, DOWN, buff=0.5)
      
-        self.play(Write(boundary_expr), run_time=4.0)
-        boundary_details.next_to(boundary_expr, DOWN, buff=0.5)
-        self.play(Write(boundary_details), run_time=4.0)
-        self.wait(1.0)
+        self.play(
+            Write(boundary_details_1),
+            Write(boundary_details_2),
+            run_time=3)
+        self.wait(2.0)
 
-        # 4. Disappearance of all text elements
-        text_elements = VGroup(title, laplace_eq_system, boundary_expr, boundary_details)
-        self.play(FadeOut(text_elements, shift=UP * 0.3), run_time=1.0)
+        text_elements = VGroup(title, laplace_eq_system, boundary_expr,
+                               boundary_details_1, boundary_details_2)
+        self.play(FadeOut(text_elements, shift=UP * 0.5), run_time=1.0)
 
-        # === Part 2: 3D Plot with Non-Homogeneous Mesh & Modified Solution ===
-        self.move_camera(phi=60 * DEGREES, theta=-55 * DEGREES, distance=14, run_time=1.8)
-
-        L_val = 1.0 # Numerical value for L
-
-        # 5a. 3D Cartesian Grid
+        L_val = 1.0
         axes = ThreeDAxes(
             x_range=[-L_val*1.2, L_val*1.2, L_val/2], 
             y_range=[-L_val*1.2, L_val*1.2, L_val/2], 
-            z_range=[-0.3, 1.3, 0.2], # Adjusted for potential noise amplitude
+            z_range=[-0.3, 1.3, 0.2],
             x_length=5.5, y_length=5.5, z_length=3.8,
             axis_config={"include_numbers": False, "font_size": 18, "include_tip": False},
         )
-        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
-        self.play(Create(axes), Write(axes_labels), run_time=1.5)
 
-        # 5b. Boundary of the square on XY-plane
+        self.begin_ambient_camera_rotation(40*DEGREES, about='phi')
+        self.begin_ambient_camera_rotation(25*DEGREES, about='theta')
+        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
+        self.play(Create(axes),
+                  Write(axes_labels),
+                  run_time=1.5)
+        self.stop_ambient_camera_rotation(about='phi')
+        self.stop_ambient_camera_rotation(about='theta')
+
         domain_boundary_3d = Polygon(
             axes.c2p(-L_val, -L_val, 0), axes.c2p(L_val, -L_val, 0),
             axes.c2p(L_val, L_val, 0), axes.c2p(-L_val, L_val, 0),
