@@ -182,7 +182,7 @@ class scene3(ThreeDScene):
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
         self.camera.frame_height = 8.5
 
-        title = Text("A first example: the Laplacian", font_size=40).to_edge(UP).shift(DOWN * 0.5)
+        title = Text("A first example: the laplacian", font_size=40).to_edge(UP).shift(DOWN * 0.5)
         self.play(Write(title), run_time=1.5)
         self.wait(0.5)
 
@@ -237,23 +237,28 @@ class scene3(ThreeDScene):
             x_length=5.5, y_length=5.5, z_length=3.8,
             axis_config={"include_numbers": False, "font_size": 18, "include_tip": True},
         ).shift(1.5 * LEFT + 2.5 * DOWN)
+        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
 
-        square = Square(side_length=4).shift(3.5 * RIGHT)
+        square = Square(side_length=4, z_index = 1).shift(3.5 * RIGHT)
         half_side = square.side_length / 2
+        left = square.get_left()[0]
+        right = square.get_right()[0]
+        top = square.get_top()[1]
+        bot = square.get_bottom()[1]
 
-        vert_middle = Line([square.get_left()[0] + half_side, square.get_top()[1], 0],
-                           [square.get_left()[0] + half_side, square.get_bottom()[1], 0],
-                           color = WHITE)
-        horiz_middle = Line([square.get_left()[0], square.get_top()[1] - half_side, 0],
-                            [square.get_right()[0], square.get_top()[1] - half_side, 0],
-                            color = WHITE)
+        # z_index is needed to consistenly render
+        # the lines on top of the colored squares.
+        # This DOES NOT change the z coordinate.
+        vert_middle = Line([left + half_side, top, 0], [left + half_side, bot, 0],
+                           color = WHITE, z_index = 1)
+        horiz_middle = Line([left, top - half_side, 0], [right, top - half_side, 0],
+                            color = WHITE, z_index = 1)
         
         square_and_mid = VGroup(square, vert_middle, horiz_middle)
         self.add_fixed_in_frame_mobjects(square_and_mid)
 
         self.begin_ambient_camera_rotation(30*DEGREES, about='phi')
         self.begin_ambient_camera_rotation(20*DEGREES, about='theta')
-        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
         self.play(LaggedStart(
             Create(axes),
             Write(axes_labels),
@@ -263,24 +268,22 @@ class scene3(ThreeDScene):
         self.stop_ambient_camera_rotation(about='phi')
         self.stop_ambient_camera_rotation(about='theta')
 
-        divisions_per_quadrant = 4
         square_lines = VGroup()
+        colored_squares = VGroup()
+
+        divisions_per_quadrant = 4
         coarse_square_side = half_side / divisions_per_quadrant
         fine_square_side = coarse_square_side / 2
-
-        colored_squares = VGroup()
         colors = [interpolate_color(RED_C, BLUE_C, alpha) for alpha in np.linspace(0, 1, 10)]
 
         def add_lines_and_squares(num, side, up_to_down, stroke_width):
             for i in range(num):
                 delta = (i + 1) * side
-                left = square.get_left()[0]
-                top = square.get_top()[1]
 
                 if up_to_down == -1:
                     top -= half_side
 
-                if i != num-1:
+                if i != num - 1:
                     # Vertical
                     square_line = Line([left + delta, top, 0], [left + delta, top - half_side, 0],
                                     color = WHITE, stroke_width = stroke_width)
@@ -317,10 +320,11 @@ class scene3(ThreeDScene):
         add_lines_and_squares(divisions_per_quadrant, coarse_square_side, 1, 3)
         add_lines_and_squares(2*divisions_per_quadrant, fine_square_side, -1, 1.5)
 
-        self.add_fixed_in_frame_mobjects(square_lines)
+        # Order matters: we want to show lines on top of squares
         self.add_fixed_in_frame_mobjects(colored_squares)
+        self.add_fixed_in_frame_mobjects(square_lines)
 
-        def piecewise_solution_func(x, y):
+        def solution_func(x, y):
             return math.sin(math.pi*x) * math.sin(math.pi*y) * math.exp(-7.5 * (x - y) * (x-y))
         
         surface_options = {
@@ -331,31 +335,36 @@ class scene3(ThreeDScene):
         }
 
         solution_BL = Surface(
-            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
-            u_range=[-L_val, 0], v_range=[-L_val, 0],
+            lambda u, v: axes.c2p(u, v, solution_func(u, v)),
+            u_range=[-L_val, 0],
+            v_range=[-L_val, 0],
             resolution=(18, 18),
             **surface_options
         )
         solution_BR = Surface(
-            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
-            u_range=[0, L_val], v_range=[-L_val, 0],
+            lambda u, v: axes.c2p(u, v, solution_func(u, v)),
+            u_range=[0, L_val],
+            v_range=[-L_val, 0],
             resolution=(9, 9),
             **surface_options 
         )
         solution_TL = Surface(
-            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
-            u_range=[-L_val, 0], v_range=[0, L_val],
+            lambda u, v: axes.c2p(u, v, solution_func(u, v)),
+            u_range=[-L_val, 0],
+            v_range=[0, L_val],
             resolution=(9, 9),
             **surface_options
         )
         solution_TR = Surface(
-            lambda u, v: axes.c2p(u, v, piecewise_solution_func(u, v)),
-            u_range=[0, L_val], v_range=[0, L_val],
+            lambda u, v: axes.c2p(u, v, solution_func(u, v)),
+            u_range=[0, L_val],
+            v_range=[0, L_val],
             resolution=(18, 18),
             **surface_options 
         )
         
         solution = VGroup(solution_BL, solution_BR, solution_TL, solution_TR)
+        solution.set_z_index(1)
 
         self.play(
             Create(solution),
@@ -365,147 +374,280 @@ class scene3(ThreeDScene):
         self.wait(4.0)
 
         all_3d_objects = VGroup(axes, axes_labels, solution)
-        all_2d_objects = VGroup(square_and_mid, square_lines, colored_squares)
+
+        # Order matters: we want to fade square_and_mid before colored_squares
+        all_2d_objects = VGroup(square_and_mid, colored_squares, square_lines)
         self.play(FadeOut(all_3d_objects, shift=OUT*0.5),
                   FadeOut(all_2d_objects, shift=UP*0.5),
                   run_time=1.0)
         self.wait(0.5)
-        
+
 class scene4(ThreeDScene):
     def construct(self):
-        # === Part 1: Equation Display (Initial 2D Camera View) ===
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
-        self.camera.frame_height = 8.0 # Standard viewing height
+        self.camera.frame_height = 8.5
 
-        # 1. Title
-        title = Tex("Reaction-Diffusion Systems", font_size=48)
-        title.to_edge(UP, buff=0.7) # Position at the top
+        title = Text("Time-dependent reaction-diffusion systems", font_size=40).to_edge(UP).shift(DOWN * 0.5)
         self.play(Write(title), run_time=1.5)
-        self.wait(0.3)
-
-        # 2. Heat Equation with Non-linear Reaction Term
-        # Using D for the diffusion coefficient
-        equation = MathTex(
-            r"\frac{\partial u}{\partial t} - D \Delta u + R(u) = f",
-            font_size=42
-        )
-        
-        # Initial and Boundary Conditions text
-        ic_text = MathTex(r"u(\mathbf{x}, 0) = u_0(\mathbf{x})", r"\quad (\text{Initial Condition})", font_size=36)
-        bc_text = MathTex(r"\text{+ Appropriate Boundary Conditions on } \partial\Omega", font_size=36)
-        
-        # Group equation and conditions, then position below title
-        equation_group = VGroup(equation, ic_text, bc_text).arrange(DOWN, buff=0.4, aligned_edge=LEFT)
-        equation_group.next_to(title, DOWN, buff=0.6)
-        
-        self.play(Write(equation), run_time=2.0)
-        self.wait(0.2)
-        self.play(Write(ic_text), run_time=1.5)
-        self.wait(0.2)
-        self.play(Write(bc_text), run_time=1.5)
-        self.wait(2.0) # Hold for viewing
-
-        # 3. Disappearance of text elements
-        text_elements_to_fade = VGroup(title, equation_group)
-        self.play(FadeOut(text_elements_to_fade, shift=UP * 0.3), run_time=1.0)
-        self.wait(0.5) # Pause before 3D part
-
-        # === Part 2: 3D Time-Dependent Wave ===
-        # Transition camera to a 3D perspective
-        self.move_camera(
-            phi=60 * DEGREES,       # Tilt
-            theta=-75 * DEGREES,    # Rotate
-            distance=16,            # Zoom out for a "big" grid view
-            run_time=2.0
-        )
-        # self.camera.frame_height = 9 # Optionally adjust frame height for new view
-
-        # Domain parameters for the square [-L, L] x [-L, L]
-        L = 2.0 
-
-        # 4. "Big" 3D Cartesian Grid
-        axes = ThreeDAxes(
-            x_range=[-L * 1.1, L * 1.1, L / 2],  # Extend ranges slightly beyond L
-            y_range=[-L * 1.1, L * 1.1, L / 2],
-            z_range=[-0.5, 1.5, 0.5],      # Adjust z_range to fit wave amplitude
-            x_length=7, y_length=7, z_length=4, # Visual size of axes
-            axis_config={"include_numbers": True, "font_size": 20, "include_tip": False},
-        )
-        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u(x,y,t)")
-        
-        # 5. Square domain on XY-plane (optional visual)
-        domain_square = Polygon(
-            axes.c2p(-L, -L, 0), axes.c2p(L, -L, 0),
-            axes.c2p(L, L, 0), axes.c2p(-L, L, 0),
-            color=BLUE_D, stroke_width=2.5, fill_opacity=0.1
-        )
-        
-        self.play(Create(axes), Write(axes_labels), Create(domain_square), run_time=2.0)
         self.wait(0.5)
 
-        # 6. Time-dependent wave solution
-        time = ValueTracker(0) # This will track the current time 't' for the animation
+        rd_eq_system = MathTex(
+            r"""\begin{cases}
+                \frac{\partial u}{\partial t} - \mu \Delta u + \sigma u = f & (\mathbf{x}, \mathbf{t}) \in \Omega \times (0, T) \\
+                u(\mathbf{x}, 0) = u_0(\mathbf{x}) & \mathbf{x} \in \Omega \\
+                u(\mathbf{x}, \mathbf{t}) = g(\mathbf{x}, \mathbf{t}) & (\mathbf{x}, \mathbf{t}) \in \partial\Omega \times (0, T)
+            \end{cases}""",
+            font_size=40
+        ).next_to(title, DOWN, buff=0.35)
+                        
+        self.play(Write(rd_eq_system), run_time=3.5)
+        self.wait(3.0)
 
-        # Define the wave function u(x, y, t_normalized)
-        # t_normalized will go from 0 to 1 during the animation.
-        def moving_gaussian_wave(x, y, t_normalized):
-            amplitude = 1.2
-            width_param = 0.6  # Controls the "spread" of the Gaussian pulse
-            
-            # Wave travels from x = -L (left) to x = +L (right) as t_normalized goes 0 to 1
-            # Start slightly off-screen and end slightly off-screen for smooth entry/exit
-            start_x_center = -L - 2 * width_param 
-            end_x_center = L + 2 * width_param
-            current_x_center = interpolate(start_x_center, end_x_center, t_normalized)
-            
-            center_y = 0 # Wave centered along y=0 for this example
-            
-            # Gaussian pulse shape
-            exponent = -(((x - current_x_center)**2 + (y - center_y)**2) / (2 * width_param**2))
-            return amplitude * np.exp(exponent)
+        text_elements = VGroup(title, rd_eq_system)
+        self.play(FadeOut(text_elements, shift=UP * 0.5), run_time=1.0)
+        self.wait(0.5)
 
-        # Create the Surface mobject. It will be updated based on `time.get_value()`.
+        L_val = 1.0 
+        axes = ThreeDAxes(
+            x_range=[-L_val*1.2, L_val*1.2, 0.2],
+            y_range=[-L_val*1.2, L_val*1.2, 0.2],
+            z_range=[-0.5, 1.5, 0.2],
+            x_length=5.5, y_length=5.5, z_length=3.8,
+            axis_config={"include_numbers": False, "font_size": 18, "include_tip": True},
+        ).shift(1.5 * LEFT + 2.5 * DOWN)
+        axes_labels = axes.get_axis_labels(x_label="x", y_label="y", z_label="u")
+
+        square = Square(side_length=4, z_index = 1).shift(3.5 * RIGHT)
+        half_side = square.side_length / 2
+        square_center_x = square.get_center()[0]
+        square_center_y = square.get_center()[1]
+        left = square.get_left()[0]
+        right = square.get_right()[0]
+        top = square.get_top()[1]
+        bot = square.get_bottom()[1]
+
+        vert_middle = Line([left + half_side, top, 0], [left + half_side, bot, 0],
+                           color = WHITE, z_index = 1)
+        horiz_middle = Line([left, top - half_side, 0], [right, top - half_side, 0],
+                            color = WHITE, z_index = 1)
+        
+        square_and_mid = VGroup(square, vert_middle, horiz_middle)
+        self.add_fixed_in_frame_mobjects(square_and_mid)
+        
+        self.begin_ambient_camera_rotation(30*DEGREES, about='phi')
+        self.begin_ambient_camera_rotation(20*DEGREES, about='theta')
+        self.play(LaggedStart(
+            Create(axes),
+            Write(axes_labels),
+            Create(square_and_mid),
+            lag_ratio = 0.2,
+            run_time=2))
+        self.stop_ambient_camera_rotation(about='phi')
+        self.stop_ambient_camera_rotation(about='theta')
+
+        time = ValueTracker(-2.5)
+
+        def solution_func(x, y, t):            
+            return math.sin(math.pi*(x-t)) * math.sin(math.pi*y) * math.exp(-7.5 * (x - t - y) * (x - t -y))
+
+        square_lines = VGroup()
+        colored_squares = VGroup()
+
+        divisions = 8
+        coarse_square_side = square.side_length / divisions
+        colors = [interpolate_color(RED_C, BLUE_C, alpha) for alpha in np.linspace(0, 1, 10)]
+        def add_lines_and_squares(num, side, stroke_width):
+            for i in range(num):
+                delta = (i + 1) * side
+
+                if i != num - 1:
+                    # Vertical
+                    square_line = Line([left + delta, top, 0], [left + delta, bot, 0],
+                                    color = WHITE, stroke_width = stroke_width, z_index = 1)
+                    square_lines.add(square_line)
+                    # Horizontal
+                    square_line = Line([left, top - delta, 0], [right, top - delta, 0],
+                                    color = WHITE, stroke_width = stroke_width, z_index = 1)
+                    square_lines.add(square_line)
+
+                for j in range(num):
+                    colored_square = Square(side_length=side)
+                    colored_square.move_to([left + j * side + side/2, top - i * side - side/2, 0])
+                    colored_square.set_stroke(width=0)
+                    colored_square.set_fill(color=colors[random.randint(0, 9)], opacity=0.85)
+                    colored_squares.add(colored_square)
+
+        add_lines_and_squares(divisions, coarse_square_side, 3)
+
+        adaptive_grid = VGroup()
+        highly_refined = {}
+        refined = {}
+
+        def update_adaptive_grid(mob):
+            t = time.get_value()
+            new_side = coarse_square_side / 2
+            new_grid_mobjects = VGroup()
+
+            for i in range(divisions):
+                for j in range(divisions):
+                    current_center_x = square_center_x - half_side + (j + 0.5) * coarse_square_side
+                    current_center_y = square_center_y - half_side + (i + 0.5) * coarse_square_side
+                    
+                    deltax = current_center_x - square_center_x
+                    deltay = current_center_y - square_center_y
+                    mapped_x = deltax * L_val / half_side
+                    mapped_y = deltay * L_val / half_side
+
+                    solution_height = solution_func(mapped_x, mapped_y, t)
+                    used_colors = []  
+
+                    if solution_height > 0.6:
+                        if (i*divisions+j) in refined:
+                            refined.pop(i*divisions + j)
+
+                        check_for_colors = 0
+                        if (i*divisions+j) in highly_refined:
+                            check_for_colors = 1
+
+                        colored_squares[i*divisions + j].set_fill(opacity=0)
+
+                        vertices = [
+                            [current_center_x - new_side, current_center_y, 0],
+                            [current_center_x - new_side, current_center_y + new_side, 0],
+                            [current_center_x, current_center_y + new_side, 0],
+                            [current_center_x + new_side, current_center_y + new_side, 0],
+                            [current_center_x + new_side, current_center_y, 0],
+                            [current_center_x + new_side, current_center_y - new_side, 0],
+                            [current_center_x, current_center_y - new_side, 0],
+                            [current_center_x - new_side, current_center_y - new_side, 0]
+                        ]
+   
+                        for k in range(8):
+                            p = Polygon(vertices[k], [current_center_x,  current_center_y, 0], vertices[(k+1)%8])
+                            p.set_stroke(width=0)
+
+                            if check_for_colors:
+                                p.set_fill(color=colors[highly_refined[i*divisions+j][k]], opacity=0.9)
+                            else:
+                                color_index = random.randint(0, 9)
+                                p.set_fill(color=colors[color_index], opacity=0.9)
+                                used_colors.append(color_index)
+
+                            new_grid_mobjects.add(p)
+
+                            line = Line([current_center_x,  current_center_y, 0],
+                                        vertices[k], color = WHITE, stroke_width = 3)
+                            new_grid_mobjects.add(line)
+
+                        if check_for_colors == 0:
+                            highly_refined[i*divisions+j] = used_colors
+                    elif solution_height > 0.2:
+                        if (i*divisions+j) in highly_refined:
+                            highly_refined.pop(i*divisions + j)
+
+                        check_for_colors = 0
+                        if (i*divisions+j) in refined:
+                            check_for_colors = 1
+
+                        colored_squares[i*divisions + j].set_fill(opacity=0)
+
+                        centers = [
+                            [current_center_x - new_side/2, current_center_y - new_side/2, 0],
+                            [current_center_x - new_side/2, current_center_y + new_side/2, 0],
+                            [current_center_x + new_side/2, current_center_y - new_side/2, 0],
+                            [current_center_x + new_side/2, current_center_y + new_side/2, 0]
+                        ]
+
+                        for k in range(4):
+                            s = Square(side_length=new_side)
+                            s.move_to(centers[k])
+                            s.set_stroke(width=0)
+
+                            if check_for_colors:
+                                s.set_fill(color=colors[refined[i*divisions+j][k]], opacity=0.9)
+                            else:
+                                color_index = random.randint(0, 9)
+                                s.set_fill(color=colors[color_index], opacity=0.9)
+                                used_colors.append(color_index)
+
+                            new_grid_mobjects.add(s)
+                        
+                        line = Line([current_center_x, current_center_y + new_side, 0],
+                                    [current_center_x, current_center_y - new_side, 0],
+                                    color = WHITE, stroke_width = 3)
+                        new_grid_mobjects.add(line)
+                        line = Line([current_center_x + new_side, current_center_y, 0],
+                                    [current_center_x - new_side, current_center_y, 0],
+                                    color = WHITE, stroke_width = 3)
+                        new_grid_mobjects.add(line)
+
+                        if check_for_colors == 0:
+                            refined[i*divisions+j] = used_colors
+                    else:
+                        if (i*divisions+j) in highly_refined:
+                            highly_refined.pop(i*divisions + j)
+                        if (i*divisions+j) in refined:
+                            refined.pop(i*divisions + j)
+                        colored_squares[i*divisions+j].set_fill(opacity=0.85)
+                        
+            mob.become(new_grid_mobjects)
+            self.add_fixed_in_frame_mobjects(mob)
+
+        self.add_fixed_in_frame_mobjects(adaptive_grid)
+        self.add_fixed_in_frame_mobjects(colored_squares)
+        self.add_fixed_in_frame_mobjects(square_lines)
+
+        adaptive_grid.add_updater(update_adaptive_grid)
+        update_adaptive_grid(adaptive_grid)
+
+        surface_options = {
+            "u_range": [-L_val, L_val],
+            "v_range": [-L_val, L_val],
+            "resolution": (24, 24),
+            "fill_opacity": 0.85,
+            "checkerboard_colors": [BLUE_E, BLUE_C],
+            "stroke_color": BLACK,
+            "stroke_width": 0.1,
+        }
+
         solution_surface = Surface(
-            lambda u, v: axes.c2p(u, v, moving_gaussian_wave(u, v, time.get_value())),
-            u_range=[-L, L],  # Corresponds to x-axis domain
-            v_range=[-L, L],  # Corresponds to y-axis domain
-            resolution=(56, 56), # (nu, nv) - samples for smoothness
-            fill_opacity=0.75,
-            checkerboard_colors=[TEAL_D, PURPLE_D], # Colors for the surface
-            stroke_width=0.2,
-            stroke_color=BLACK
+            lambda u, v: axes.c2p(u, v, solution_func(u, v, time.get_value())),
+            **surface_options
         )
 
-        # Add an updater to the surface so it redraws each frame based on the 'time' ValueTracker
         solution_surface.add_updater(
-            lambda mob: mob.become( # .become() regenerates the mobject
+            lambda mob: mob.become(
                 Surface(
-                    lambda u, v: axes.c2p(u, v, moving_gaussian_wave(u, v, time.get_value())),
-                    u_range=[-L, L], v_range=[-L, L],
-                    resolution=(56, 56), # Keep consistent resolution
-                    fill_opacity=0.75,
-                    checkerboard_colors=[TEAL_D, PURPLE_D],
-                    stroke_width=0.2, stroke_color=BLACK
+                    lambda u, v: axes.c2p(u, v, solution_func(u, v, time.get_value())),
+                    **surface_options
                 )
             )
         )
         
-        self.play(Create(solution_surface), run_time=1.0) # Initial appearance of the wave at t=0
+        self.play(Create(solution_surface),
+                  Create(colored_squares),
+                  Create(square_lines),
+                  run_time=3.0)
         
-        # Animate the wave by changing the 'time' ValueTracker from 0 to 1
-        animation_run_time = 7.0 # Duration of the wave movement animation
         self.play(
-            time.animate.set_value(1), # Animate 'time' from its current value (0) to 1
-            run_time=animation_run_time,
-            rate_func=linear # Wave moves at a constant speed
+            time.animate.set_value(2.5),
+            run_time=10.0,
+            rate_func=linear
         )
-        self.wait(1.0) # Hold the final state of the wave
 
-        # Cleanup
-        all_3d_elements = VGroup(axes, axes_labels, domain_square, solution_surface)
-        self.play(FadeOut(all_3d_elements), run_time=1.5)
+        self.wait(1.0)
+
+        # If we don't clear the updater it will try to bring
+        # the surface's opacity back to 0.85
+        solution_surface.clear_updaters()
+        adaptive_grid.clear_updaters()
+
+        all_3d_objects = VGroup(solution_surface, axes, axes_labels)
+        all_2d_objects = VGroup(square_and_mid, square_lines, colored_squares, adaptive_grid)
+        self.play(FadeOut(all_3d_objects, shift=OUT*0.5),
+                  FadeOut(all_2d_objects, shift=UP*0.5),
+                  run_time=1.0)
         self.wait(0.5)
-
 
 class scene41(Scene): # Or scene41 if you prefer to keep your naming
     def construct(self):
