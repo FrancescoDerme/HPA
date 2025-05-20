@@ -783,3 +783,126 @@ class scena5(Scene):
         all_objects = VGroup(*self.mobjects)
         self.play(all_objects.animate.shift(UP).fade(1))
         self.wait(2)
+
+def _create_trophy_geometry() -> VGroup:
+    """
+    Creates the basic geometric components of a trophy (cup, stem, base)
+    and returns them as a VGroup.
+    The VGroup's origin will be at the bottom-center of the base.
+    """
+    cup_width_top = 0.8
+    cup_width_bottom = 0.4
+    cup_height = 0.6
+    stem_width = 0.15
+    stem_height = 0.5
+    base_width = 0.7
+    base_height = 0.12
+
+    cup_points = [
+        (-cup_width_top / 2, cup_height / 2, 0),
+        (cup_width_top / 2, cup_height / 2, 0),
+        (cup_width_bottom / 2, -cup_height / 2, 0),
+        (-cup_width_bottom / 2, -cup_height / 2, 0)
+    ]
+    cup = Polygon(*cup_points)
+    stem = Rectangle(width=stem_width, height=stem_height)
+    base = Rectangle(width=base_width, height=base_height)
+
+    stem.next_to(cup, DOWN, buff=0)
+    base.next_to(stem, DOWN, buff=0)
+
+    trophy_geometry = VGroup(cup, stem, base)
+    # Set the origin of the VGroup to the bottom center of the base
+    trophy_geometry.move_to(ORIGIN, aligned_edge=DOWN)
+    return trophy_geometry
+
+# --- Function to create an OUTLINED trophy ---
+def create_trophy_outline(outline_color=WHITE, stroke_width_val=4) -> VGroup:
+    """
+    Creates and returns a VGroup representing an outlined trophy.
+    """
+    trophy_outline = _create_trophy_geometry()
+    for part in trophy_outline:
+        part.set_fill(opacity=0.0)
+        part.set_stroke(color=outline_color, width=stroke_width_val)
+    return trophy_outline
+
+# --- Function to create a FILLED trophy shape ---
+def create_filled_trophy_shape(fill_color=GOLD, stroke_color=None, stroke_width_val=0) -> VGroup:
+    """
+    Creates and returns a VGroup representing a filled trophy.
+    If stroke_color is None, it defaults to fill_color for a subtle edge if stroke_width_val > 0.
+    """
+    trophy_filled = _create_trophy_geometry()
+    actual_stroke_color = stroke_color if stroke_color is not None else fill_color
+    for part in trophy_filled:
+        part.set_fill(color=fill_color, opacity=1.0)
+        part.set_stroke(color=actual_stroke_color, width=stroke_width_val)
+    return trophy_filled
+
+
+class FinalSceneTrophies(Scene):
+    def construct(self):
+        # --- Scene Parameters ---
+        num_trophies_to_show = 7  # Number of trophies to animate
+        trophy_fill_color = GOLD    # Color for the filled trophies
+        animation_lag_ratio = 0.3 # Controls speed of sequential animations
+        final_pause_duration = 2  # Pause at the very end
+
+        # --- 1. Gratitude Messages ---
+        thank_you_text = Text("Thank You!").scale(1.5)
+        appreciation_text = Text("Pietro Fumagalli      Francesco Derme").scale(0.8)
+        appreciation_text.next_to(thank_you_text, DOWN, buff=0.5)
+
+        self.play(Write(thank_you_text))
+        self.play(FadeIn(appreciation_text, shift=UP*0.5, lag_ratio=animation_lag_ratio))
+        self.wait(1.5)
+
+        # --- 2. Introduce Outline Trophies ---
+        outline_trophies_group = VGroup()
+        for _ in range(num_trophies_to_show):
+            trophy = create_trophy_outline(outline_color=WHITE) # Use your preferred outline color
+            outline_trophies_group.add(trophy)
+
+        outline_trophies_group.arrange(RIGHT, buff=0.6).scale(0.7) # Arrange and scale the group
+        outline_trophies_group.next_to(appreciation_text, DOWN, buff=0.7)
+
+        self.play(
+            LaggedStart(
+                *[GrowFromCenter(trophy) for trophy in outline_trophies_group],
+                lag_ratio=animation_lag_ratio
+            )
+        )
+        self.wait(1)
+
+        # --- 3. Transform Trophies to Filled ---
+        # Create target filled trophies for the Transform animation
+        # The mobjects in outline_trophies_group will be transformed into these
+        transform_animations = []
+        for i, outline_trophy_instance in enumerate(outline_trophies_group):
+            filled_version = create_filled_trophy_shape(fill_color=trophy_fill_color)
+            # Ensure filled version matches size and position of the outline one for smooth Transform
+            filled_version.match_height(outline_trophy_instance) # or .match_width or .scale_like
+            filled_version.move_to(outline_trophy_instance.get_center())
+            
+            transform_animations.append(Transform(outline_trophy_instance, filled_version))
+
+        # Play the filling animation for each trophy
+        self.play(LaggedStart(*transform_animations, lag_ratio=animation_lag_ratio))
+        self.wait(1.5)
+        # At this point, outline_trophies_group contains the filled trophy mobjects
+
+
+        # --- 5. Final Fade Out ---
+        elements_to_fade = [
+            thank_you_text,
+            appreciation_text,
+            outline_trophies_group, # This group now contains the filled trophies
+        ]
+        self.play(
+            LaggedStart(
+                *[FadeOut(mob) for mob in elements_to_fade],
+                lag_ratio=0.1 # Quick fade out
+            )
+        )
+        self.wait(final_pause_duration) # Final pause before video ends
