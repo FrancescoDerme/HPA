@@ -257,16 +257,19 @@ class scene3(ThreeDScene):
         square_and_mid = VGroup(square, vert_middle, horiz_middle)
         self.add_fixed_in_frame_mobjects(square_and_mid)
 
-        self.begin_ambient_camera_rotation(30*DEGREES, about='phi')
-        self.begin_ambient_camera_rotation(20*DEGREES, about='theta')
-        self.play(LaggedStart(
-            Create(axes),
-            Write(axes_labels),
-            Create(square_and_mid),
-            lag_ratio = 0.2,
-            run_time=2))
-        self.stop_ambient_camera_rotation(about='phi')
-        self.stop_ambient_camera_rotation(about='theta')
+        phi_tracker, theta_tracker, *_, = self.camera.get_value_trackers()
+
+        self.play(
+            phi_tracker.animate.set_value(60*DEGREES),
+            theta_tracker.animate.set_value(-50*DEGREES),
+            LaggedStart(
+                Create(axes),
+                Write(axes_labels),
+                Create(square_and_mid),
+                lag_ratio = 0.2,
+            ),
+            run_time=2
+        )
 
         square_lines = VGroup()
         colored_squares = VGroup()
@@ -279,40 +282,41 @@ class scene3(ThreeDScene):
         def add_lines_and_squares(num, side, up_to_down, stroke_width):
             for i in range(num):
                 delta = (i + 1) * side
+                quadrant_top = square.get_top()[1]
 
                 if up_to_down == -1:
-                    top -= half_side
+                    quadrant_top -= half_side
 
                 if i != num - 1:
                     # Vertical
-                    square_line = Line([left + delta, top, 0], [left + delta, top - half_side, 0],
+                    square_line = Line([left + delta, quadrant_top, 0], [left + delta, quadrant_top - half_side, 0],
                                     color = WHITE, stroke_width = stroke_width)
                     square_lines.add(square_line)
                     # Horizontal
-                    square_line = Line([left, top - delta, 0], [left + half_side, top - delta, 0],
+                    square_line = Line([left, quadrant_top - delta, 0], [left + half_side, quadrant_top - delta, 0],
                                     color = WHITE, stroke_width = stroke_width)
                     square_lines.add(square_line)
                     # Vertical shifted
-                    square_line = Line([left + half_side + delta, top - up_to_down * half_side, 0],
-                                    [left + half_side + delta, top - half_side - up_to_down * half_side, 0],
+                    square_line = Line([left + half_side + delta, quadrant_top - up_to_down * half_side, 0],
+                                    [left + half_side + delta, quadrant_top - half_side - up_to_down * half_side, 0],
                                     color = WHITE, stroke_width = stroke_width)
                     square_lines.add(square_line)
                     # Horizontal shifted
-                    square_line = Line([left + half_side, top - delta - up_to_down * half_side, 0],
-                                    [left + 2 * half_side, top - delta - up_to_down * half_side, 0],
+                    square_line = Line([left + half_side, quadrant_top - delta - up_to_down * half_side, 0],
+                                    [left + 2 * half_side, quadrant_top - delta - up_to_down * half_side, 0],
                                     color = WHITE, stroke_width = stroke_width)
                     square_lines.add(square_line)
 
                 for j in range(num):
                     colored_square = Square(side_length=side)
-                    colored_square.move_to([left + j * side + side/2, top - i * side - side/2, 0])
+                    colored_square.move_to([left + j * side + side/2, quadrant_top - i * side - side/2, 0])
                     colored_square.set_stroke(width=0)
                     colored_square.set_fill(color=colors[random.randint(0, 9)], opacity=0.85)
                     colored_squares.add(colored_square)
 
                     colored_square = Square(side_length=side)
                     colored_square.move_to([left + j * side + side/2 + half_side,
-                                            top - i * side - side/2 - up_to_down * half_side, 0])
+                                            quadrant_top - i * side - side/2 - up_to_down * half_side, 0])
                     colored_square.set_stroke(width=0)
                     colored_square.set_fill(color=colors[random.randint(0, 9)], opacity=0.85)
                     colored_squares.add(colored_square)
@@ -433,18 +437,21 @@ class scene4(ThreeDScene):
         
         square_and_mid = VGroup(square, vert_middle, horiz_middle)
         self.add_fixed_in_frame_mobjects(square_and_mid)
-        
-        self.begin_ambient_camera_rotation(30*DEGREES, about='phi')
-        self.begin_ambient_camera_rotation(20*DEGREES, about='theta')
-        self.play(LaggedStart(
-            Create(axes),
-            Write(axes_labels),
-            Create(square_and_mid),
-            lag_ratio = 0.2,
-            run_time=2))
-        self.stop_ambient_camera_rotation(about='phi')
-        self.stop_ambient_camera_rotation(about='theta')
 
+        phi_tracker, theta_tracker, *_, = self.camera.get_value_trackers()
+        
+        self.play(
+            phi_tracker.animate.set_value(60*DEGREES),
+            theta_tracker.animate.set_value(-50*DEGREES),
+            LaggedStart(
+                Create(axes),
+                Write(axes_labels),
+                Create(square_and_mid),
+                lag_ratio = 0.2,
+            ),
+            run_time=2
+        )
+        
         time = ValueTracker(-2.5)
 
         def solution_func(x, y, t):            
@@ -648,192 +655,166 @@ class scene4(ThreeDScene):
                   FadeOut(all_2d_objects, shift=UP*0.5),
                   run_time=1.0)
         self.wait(0.5)
-
-class scene41(Scene): # Or scene41 if you prefer to keep your naming
+        
+class scene5(Scene):
     def construct(self):
-        # --- 1. Domain and Detailed Non-homogeneous Mesh (Initially Centered) ---
         domain_size = 6.0
-        L = domain_size / 2.0
-        domain_outline = Square(side_length=domain_size, stroke_color=BLUE_D, stroke_width=2.5)
-        domain_outline.move_to(ORIGIN)
+        L_val = domain_size / 2.0
+        domain = Square(side_length=domain_size, stroke_color=WHITE, stroke_width=3)
+        domain.move_to(ORIGIN)
 
-        mesh_elements = VGroup()
-        quadrant_L = L / 2.0
         quadrant_centers = {
-            "TL": np.array([-quadrant_L, quadrant_L, 0]), "TR": np.array([quadrant_L, quadrant_L, 0]),
-            "BL": np.array([-quadrant_L, -quadrant_L, 0]), "BR": np.array([quadrant_L, -quadrant_L, 0])
+            "TL": np.array([-L_val/2, L_val/2, 0]),
+            "TR": np.array([L_val/2, L_val/2, 0]),
+            "BL": np.array([-L_val/2, -L_val/2, 0]),
+            "BR": np.array([L_val/2, -L_val/2, 0])
         }
         
         n_fine_divs = 12 
         n_coarse_divs = 6
 
-        def create_subgrid_elements(center_pos, half_L_quad, num_divs, base_color):
-            sub_elements = VGroup()
-            step = (2 * half_L_quad) / num_divs
+        mesh_elements = VGroup()
+
+        def add_rectangles(center_pos, num_divs, color):
+            step = L_val / num_divs
             for i in range(num_divs):
                 for j in range(num_divs):
-                    x_bottom_left = center_pos[0] - half_L_quad + i * step
-                    y_bottom_left = center_pos[1] - half_L_quad + j * step
-                    rect = Rectangle(width=step, height=step, 
-                                     stroke_color=base_color, stroke_width=0.5,
-                                     fill_opacity=0.0) 
-                    rect.move_to(np.array([x_bottom_left + step/2, y_bottom_left + step/2, 0]))
-                    sub_elements.add(rect)
-            return sub_elements
+                    x_bottom_left = center_pos[0] - L_val/2 + i * step
+                    y_bottom_left = center_pos[1] - L_val/2 + j * step
+                    r = Rectangle(width=step, height=step, 
+                                  stroke_color=color, stroke_width=0.5,
+                                  fill_opacity=0.0) 
+                    r.move_to([x_bottom_left + step/2, y_bottom_left + step/2, 0])
+                    mesh_elements.add(r)
 
-        mesh_elements.add(*create_subgrid_elements(quadrant_centers["BL"], quadrant_L, n_fine_divs, DARK_GREY))
-        mesh_elements.add(*create_subgrid_elements(quadrant_centers["TR"], quadrant_L, n_fine_divs, DARK_GREY))
-        mesh_elements.add(*create_subgrid_elements(quadrant_centers["TL"], quadrant_L, n_coarse_divs, GREY_BROWN))
-        mesh_elements.add(*create_subgrid_elements(quadrant_centers["BR"], quadrant_L, n_coarse_divs, GREY_BROWN))
+        add_rectangles(quadrant_centers["BL"], n_fine_divs, WHITE)
+        add_rectangles(quadrant_centers["TR"], n_fine_divs, WHITE)
+        add_rectangles(quadrant_centers["TL"], n_coarse_divs, WHITE)
+        add_rectangles(quadrant_centers["BR"], n_coarse_divs, WHITE)
 
-        self.play(Create(domain_outline), Create(mesh_elements, lag_ratio=0.002, run_time=4.0))
-        self.wait(0.5)
-        mesh_display_group = VGroup(domain_outline, mesh_elements)
+        start_time = -5
+        time = ValueTracker(start_time)
 
-        # --- 2. Indicator Function I(x) Visualization on Mesh ---
-
-
-        peak_bl_center = quadrant_centers["BL"]
-        peak_tr_center = quadrant_centers["TR"]
-        indicator_sigma = quadrant_L * 0.85
-
-        def get_indicator_value(point_xyz):
-            p = point_xyz[:2] 
-            val_bl = 0.9 * np.exp(-np.sum((p - peak_bl_center[:2])**2) / (2 * indicator_sigma**2))
-            val_tr = 0.9 * np.exp(-np.sum((p - peak_tr_center[:2])**2) / (2 * indicator_sigma**2))
-            return np.clip(val_bl + val_tr, 0, 1.0) 
-
-        indicator_value_animations = [
-            element.animate.set_fill(
-                interpolate_color(BLUE_E, RED_D, get_indicator_value(element.get_center())), 
-                opacity=0.2 + 0.6 * get_indicator_value(element.get_center()) 
-            ) for element in mesh_elements
-        ]
-        self.play(LaggedStart(*indicator_value_animations, lag_ratio=0.002), run_time=3.0)
-        self.wait(1.0)
-
-        # --- 3. Layout Change & 1D Plot of I(x) with Threshold ---
-        target_mesh_scale = 0.75 
-        target_mesh_position = LEFT * (self.camera.frame_width / 2) * 0.50 
+        def solution_func(x, y, t):            
+            return math.sin(math.pi*(x-t)) * math.sin(math.pi*y) * math.exp(-7.5 * (x - t - y) * (x - t -y))
         
-        plot_width = self.camera.frame_width * 0.38 
-        plot_height = 3.0
-        plot_group_target_x = self.camera.frame_width / 3.8 
-        plot_group_target_y = 0.2 
+        def update_mesh_element(mob):
+            t = time.get_value()
+            value = 1
+            value = solution_func(mob.get_center()[0] / 6, mob.get_center()[1] / 6, time.get_value())
+            r = Rectangle(width=mob.width, height=mob.height, 
+                        stroke_color=mob.get_stroke_color(),
+                        stroke_width=mob.get_stroke_width(),
+                        fill_opacity = min(2*(t-start_time), 1) * (0.2 + 0.6 * value),
+                        fill_color = interpolate_color(BLUE_C, RED_C, value + random.random()*0.3))
+            r.move_to(mob.get_center())
+            mob.become(r)
+                
+        for element in mesh_elements:
+            element.add_updater(update_mesh_element)
+            update_mesh_element(element)
+
+        self.play(Create(domain),
+                  Create(mesh_elements, lag_ratio=0.002, run_time=4.0))
+        self.wait(0.5)
+        
+        mesh = VGroup(domain, mesh_elements)
+        target_mesh_scale = 0.75 
+        target_mesh_position = LEFT * self.camera.frame_width / 4 
+        target_plot_position = RIGHT * self.camera.frame_width / 5
 
         plot_axes = Axes(
-            x_range=[-L - 0.1, L + 0.1, L/2], 
-            y_range=[-0.05, 1.05, 0.2],   
-            x_length=plot_width,
-            y_length=plot_height,
-            axis_config={"include_numbers": True, "font_size": 16, 
-                         "decimal_number_config": {"num_decimal_places": 1}},
-            y_axis_config={"include_numbers": True, "font_size": 16,
-                           "decimal_number_config": {"num_decimal_places": 1}},
-            tips=False
-        )
-        plot_xlabel = MathTex("x \\text{ (domain slice)}", font_size=20).next_to(plot_axes.x_axis.get_right(), DR, buff=0.05)
-        plot_ylabel = MathTex("I(x)", font_size=20).next_to(plot_axes.y_axis.get_top(), UL, buff=0.05)
+            x_range=[-1.1, 1.1, 0.2], 
+            y_range=[-0.075, 1.1, 0.2],   
+            x_length=2.5,
+            y_length=1.5,
+            axis_config={
+                "include_numbers": False,
+                "include_tip": True,
+                "tick_size": 0.075,
+                "tip_width": 0.15,
+                "tip_height": 0.2
+            },
+        ).scale(2.5)
 
-        y_slice_for_plot = 0 
+        plot_axes.move_to(target_plot_position)
+
+        x_param = 0.0
+        indicator_params = {
+            "x_range": [-1, 1],
+            "color": BLUE_C,
+            "use_smoothing": False 
+        }
+
         indicator_curve = plot_axes.plot(
-            lambda x_val: get_indicator_value(np.array([x_val, y_slice_for_plot, 0])),
-            x_range=[-L, L],
-            color=YELLOW_D, use_smoothing=True 
+            lambda y_val: solution_func(x_param, y_val, start_time),
+            **indicator_params
         )
-        # --- CORRECTED LINE FOR CURVE_LABEL ---
-        curve_label = Tex("$I(x,y_0)$", font_size=18, color=YELLOW_D).next_to(
-            indicator_curve, 
-            UR, # Direction is Upper-Right
-            buff=0.15 
+
+        plot_label = MathTex("I(0, y)", font_size=42, color = BLUE_C)
+        plot_label.move_to([plot_axes.x_axis.get_left()[0] - plot_label.get_left()[0], plot_axes.y_axis.get_bottom()[1], 0])
+        plot_label.shift(UP*0.45)
+
+        threshold = 0.5
+        threshold_line = plot_axes.plot(lambda x_val: threshold, x_range=[-1.1,1.1], color=RED_C, stroke_width=3.5)
+        threshold_label = MathTex("threshold", font_size=42, color=RED_C)
+        threshold_label.move_to(threshold_line.get_left())
+        threshold_label.shift(UP*0.2).shift(RIGHT) 
+
+        lines_group = VGroup(plot_label,
+                             threshold_line, threshold_label)
+        
+        wait_to_plot = 2.55
+        
+        def update_indicator(mob):
+            t = time.get_value() + 1
+            p = plot_axes.plot(lambda y_val: solution_func(x_param, y_val, t),
+                               **indicator_params)
+            
+            if t < start_time + wait_to_plot:
+                p.set_opacity(0)
+            else:
+                p.set_opacity(min(0.35, 1.5*(t - (wait_to_plot + start_time))))
+            mob.become(p)
+        
+        self.add(indicator_curve)
+        indicator_curve.add_updater(update_indicator)
+
+        time_value_animation = time.animate(
+            run_time=15, 
+            rate_func=linear
+        ).set_value(2.5)
+
+        mesh_sequence = Succession(
+            Wait(1.5),
+            mesh.animate(run_time = 2,).scale(target_mesh_scale).move_to(target_mesh_position)
         )
-        # --- END CORRECTION ---
-
-        threshold_value_num = 0.35 
-        threshold_line_on_plot = plot_axes.plot(lambda x_val: threshold_value_num, x_range=[-L,L], color=RED_B, stroke_width=3.5)
-        threshold_label_on_plot = MathTex(f"T = {threshold_value_num}", font_size=20, color=RED_B)
-        threshold_label_on_plot.next_to(threshold_line_on_plot.get_right(), RIGHT, buff=0.1)
-
-        plot_group = VGroup(plot_axes, plot_xlabel, plot_ylabel, indicator_curve, curve_label, threshold_line_on_plot, threshold_label_on_plot)
-        plot_group.move_to(np.array([plot_group_target_x, plot_group_target_y, 0]))
+        
+        plot_sequence = Succession(
+            Wait(wait_to_plot),
+            FadeIn(plot_axes, shift=UP*0.5, run_time = 1),
+            Write(lines_group, run_time = 1.5),
+        )
 
         self.play(
-            mesh_display_group.animate.scale(target_mesh_scale).move_to(target_mesh_position),
-            FadeIn(plot_group, shift=RIGHT * 0.2),
-            run_time=1.5
+            time_value_animation,
+            mesh_sequence,
+            plot_sequence,
+            rate_func=linear
         )
-        self.wait(0.5)
 
-
-        num_total_elements = len(mesh_elements.submobjects)
-        example_indices = []
-        if num_total_elements > 0:
-            num_fine_elements_per_quad = n_fine_divs**2
-            if num_fine_elements_per_quad > 0 : example_indices.append(num_fine_elements_per_quad // 2) 
-            if num_total_elements > 2 * num_fine_elements_per_quad:
-                 example_indices.append(2*num_fine_elements_per_quad + (n_coarse_divs**2 // 2) )
-            if not example_indices and num_total_elements > 0: 
-                 example_indices = [0, min(1, num_total_elements-1)] if num_total_elements > 1 else [0]
-
-        CLUSTER_COLOR, NON_CLUSTER_COLOR = ORANGE, BLUE_C
-        CLUSTER_OPACITY, NON_CLUSTER_OPACITY = 0.9, 0.25
-
-        for element_idx in example_indices:
-            if element_idx >= num_total_elements: continue 
-            element = mesh_elements.submobjects[element_idx]
-            value = get_indicator_value(element.get_center())
-            
-            original_stroke_color = element.get_stroke_color() 
-            original_stroke_width = element.get_stroke_width()
-
-            dot_on_plot = Dot(plot_axes.c2p(element.get_center()[0], value), color=YELLOW_A, radius=0.07)
-            
-            self.play(element.animate.set_stroke(YELLOW_A, width=4), Create(dot_on_plot), run_time=0.5)
-            
-            status_text_anims = []
-            element_final_anim = None
-            if value > threshold_value_num:
-                status_text_obj = MathTex("I > T", color=GREEN_B, font_size=20).next_to(dot_on_plot, UR, buff=0.05)
-                element_final_anim = element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.5)
-            else:
-                status_text_obj = MathTex("I \\le T", color=RED_C, font_size=20).next_to(dot_on_plot, DR, buff=0.05)
-                element_final_anim = element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5)
-            
-            self.play(Write(status_text_obj), Indicate(threshold_line_on_plot, color=WHITE, scale_factor=1.05), run_time=0.8)
-            if element_final_anim:
-                self.play(element_final_anim, run_time=0.7)
-            self.play(FadeOut(dot_on_plot), FadeOut(status_text_obj), 
-                      element.animate.set_stroke(original_stroke_color, width=original_stroke_width),
-                      run_time=0.5)
-        
-        final_element_animations = []
-        processed_example_elements = [mesh_elements.submobjects[i] for i in example_indices if i < num_total_elements]
-
-        for element in mesh_elements.submobjects:
-            if element in processed_example_elements: 
-                # Ensure its final state matches the last animation (if stroke was reset above)
-                value = get_indicator_value(element.get_center())
-                if value > threshold_value_num:
-                     final_element_animations.append(element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.5))
-                else:
-                     final_element_animations.append(element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5))
-                continue 
-
-            value = get_indicator_value(element.get_center())
-            if value > threshold_value_num:
-                final_element_animations.append(element.animate.set_fill(CLUSTER_COLOR, opacity=CLUSTER_OPACITY).set_stroke(RED_E, width=1.0))
-            else:
-                final_element_animations.append(element.animate.set_fill(NON_CLUSTER_COLOR, opacity=NON_CLUSTER_OPACITY).set_stroke(GREY, width=0.5))
-    
-        
         self.wait(1.0)
 
-        # --- Fade Out All ---
-        self.play(*[FadeOut(mob) for mob in self.mobjects if mob is not None])
+        indicator_curve.clear_updaters()
+        for element in mesh_elements:
+            element.clear_updaters()
+
+        all_2d_objects = VGroup(plot_axes, lines_group, mesh, indicator_curve)
+        self.play(FadeOut(all_2d_objects, shift=UP*0.5),
+                  run_time=1.0)
         self.wait(0.5)
 
-
-class scena5(Scene):
+class scene6(Scene):
     def construct(self):
         invisible = Text("invisible").to_corner(UP)
         x_delta = config.frame_width / 6
@@ -924,8 +905,10 @@ class scena5(Scene):
         dashed_1 = DashedLine(square_lines[indexes[0]].get_start(), square_lines[indexes[0]].get_end(), dashed_ratio=0.5, color = GREEN_C)
 
         x_range = [-1.8, 1.8]
+        plot1 = axes.plot(poly1, x_range=x_range, color=RED_A)
+
         self.play(Create(mesh_refinement1),
-                  Create(axes.plot(poly1, x_range=x_range, color=RED_A)),
+                  Create(plot1),
                   FadeOut(square_lines[indexes[0]]),
                   Create(dashed_1),
             run_time = 3)
@@ -945,9 +928,10 @@ class scena5(Scene):
         mesh_refinement2.add(line2_5)
 
         dashed_2 = DashedLine(square_lines[indexes[1]].get_start(), square_lines[indexes[1]].get_end(), dashed_ratio=0.5, color = GREEN_C)
+        plot2 = axes.plot(poly2, x_range=x_range, color=RED_B)
 
         self.play(Transform(mesh_refinement1, mesh_refinement2),
-                  Create(axes.plot(poly2, x_range=x_range, color=RED_B)),
+                  Create(plot2),
                   FadeOut(square_lines[indexes[1]]),
                   Create(dashed_2),
             run_time = 3)
@@ -970,23 +954,26 @@ class scena5(Scene):
         mesh_refinement3.add(line3_5)
 
         dashed_3 = DashedLine(square_lines[indexes[2]].get_start(), square_lines[indexes[2]].get_end(), dashed_ratio=0.5, color = GREEN_C)
+        plot3 = axes.plot(poly3, x_range=x_range, color=RED_C)
 
         self.play(Transform(mesh_refinement1, mesh_refinement3),
-                  Create(axes.plot(poly3, x_range=x_range, color=RED_C)),
+                  Create(plot3),
                   FadeOut(square_lines[indexes[2]]),
                   Create(dashed_3),
             run_time = 3)
         
-        all_objects = VGroup(*self.mobjects)
-        self.play(all_objects.animate.shift(UP).fade(1))
         self.wait(2)
+        
+        all_2d_objects = VGroup(left_line, right_line, t1, t2, t3,
+                                pentagon, baseline, bigsquare, square_lines,
+                                dashed_1, dashed_2,
+                                mesh_refinement1, dashed_3,
+                                plot1, plot2, plot3)
+        self.play(FadeOut(all_2d_objects, shift = UP*0.5),
+                  run_time=1.0)
+        self.wait(0.5)
 
 def _create_trophy_geometry() -> VGroup:
-    """
-    Creates the basic geometric components of a trophy (cup, stem, base)
-    and returns them as a VGroup.
-    The VGroup's origin will be at the bottom-center of the base.
-    """
     cup_width_top = 0.8
     cup_width_bottom = 0.4
     cup_height = 0.6
@@ -1001,6 +988,7 @@ def _create_trophy_geometry() -> VGroup:
         (cup_width_bottom / 2, -cup_height / 2, 0),
         (-cup_width_bottom / 2, -cup_height / 2, 0)
     ]
+
     cup = Polygon(*cup_points)
     stem = Rectangle(width=stem_width, height=stem_height)
     base = Rectangle(width=base_width, height=base_height)
@@ -1009,27 +997,17 @@ def _create_trophy_geometry() -> VGroup:
     base.next_to(stem, DOWN, buff=0)
 
     trophy_geometry = VGroup(cup, stem, base)
-    # Set the origin of the VGroup to the bottom center of the base
     trophy_geometry.move_to(ORIGIN, aligned_edge=DOWN)
     return trophy_geometry
 
-# --- Function to create an OUTLINED trophy ---
 def create_trophy_outline(outline_color=WHITE, stroke_width_val=4) -> VGroup:
-    """
-    Creates and returns a VGroup representing an outlined trophy.
-    """
     trophy_outline = _create_trophy_geometry()
     for part in trophy_outline:
         part.set_fill(opacity=0.0)
         part.set_stroke(color=outline_color, width=stroke_width_val)
     return trophy_outline
 
-# --- Function to create a FILLED trophy shape ---
 def create_filled_trophy_shape(fill_color=GOLD, stroke_color=None, stroke_width_val=0) -> VGroup:
-    """
-    Creates and returns a VGroup representing a filled trophy.
-    If stroke_color is None, it defaults to fill_color for a subtle edge if stroke_width_val > 0.
-    """
     trophy_filled = _create_trophy_geometry()
     actual_stroke_color = stroke_color if stroke_color is not None else fill_color
     for part in trophy_filled:
@@ -1037,69 +1015,49 @@ def create_filled_trophy_shape(fill_color=GOLD, stroke_color=None, stroke_width_
         part.set_stroke(color=actual_stroke_color, width=stroke_width_val)
     return trophy_filled
 
-
-class FinalSceneTrophies(Scene):
+class scene7(Scene):
     def construct(self):
-        # --- Scene Parameters ---
-        num_trophies_to_show = 7  # Number of trophies to animate
-        trophy_fill_color = GOLD    # Color for the filled trophies
-        animation_lag_ratio = 0.3 # Controls speed of sequential animations
-        final_pause_duration = 2  # Pause at the very end
+        num_trophies = 7 
 
-        # --- 1. Gratitude Messages ---
-        thank_you_text = Text("Thank You!").scale(1.5)
-        appreciation_text = Text("Pietro Fumagalli      Francesco Derme").scale(0.8)
-        appreciation_text.next_to(thank_you_text, DOWN, buff=0.5)
+        thank_you = Text("Thank You!", font_size=60).shift(0.8*UP)
+        pietro = Text("Pietro Fumagalli", color= BLUE_C, font_size=35)
+        francesco = Text("Francesco Derme", color= BLUE_C, font_size=35)
+        pietro.shift(0.15*DOWN).shift(2.2*LEFT)
+        francesco.shift(0.15*DOWN).shift(2.2*RIGHT)
 
-        self.play(Write(thank_you_text))
-        self.play(FadeIn(appreciation_text, shift=UP*0.5, lag_ratio=animation_lag_ratio))
+        self.play(Write(thank_you))
+        self.play(Write(pietro),
+                  Write(francesco),
+                  run_time = 2)
         self.wait(1.5)
 
-        # --- 2. Introduce Outline Trophies ---
         outline_trophies_group = VGroup()
-        for _ in range(num_trophies_to_show):
-            trophy = create_trophy_outline(outline_color=WHITE) # Use your preferred outline color
+        for _ in range(num_trophies):
+            trophy = create_trophy_outline(outline_color=WHITE)
             outline_trophies_group.add(trophy)
 
-        outline_trophies_group.arrange(RIGHT, buff=0.6).scale(0.7) # Arrange and scale the group
-        outline_trophies_group.next_to(appreciation_text, DOWN, buff=0.7)
+        outline_trophies_group.arrange(RIGHT, buff=0.6).scale(0.7)
+        outline_trophies_group.next_to(thank_you, 6*DOWN)
 
-        self.play(
-            LaggedStart(
-                *[GrowFromCenter(trophy) for trophy in outline_trophies_group],
-                lag_ratio=animation_lag_ratio
-            )
+        self.play(LaggedStart(
+            *[Create(outline) for outline in outline_trophies_group],
+            lag_ratio=0.2)
         )
+
         self.wait(1)
 
-        # --- 3. Transform Trophies to Filled ---
-        # Create target filled trophies for the Transform animation
-        # The mobjects in outline_trophies_group will be transformed into these
         transform_animations = []
         for i, outline_trophy_instance in enumerate(outline_trophies_group):
-            filled_version = create_filled_trophy_shape(fill_color=trophy_fill_color)
-            # Ensure filled version matches size and position of the outline one for smooth Transform
-            filled_version.match_height(outline_trophy_instance) # or .match_width or .scale_like
+            filled_version = create_filled_trophy_shape(fill_color=GOLD)
+            filled_version.match_height(outline_trophy_instance)
             filled_version.move_to(outline_trophy_instance.get_center())
-            
             transform_animations.append(Transform(outline_trophy_instance, filled_version))
 
-        # Play the filling animation for each trophy
-        self.play(LaggedStart(*transform_animations, lag_ratio=animation_lag_ratio))
-        self.wait(1.5)
-        # At this point, outline_trophies_group contains the filled trophy mobjects
+        self.play(transform_animations)
+        self.wait(2)
 
+        all_2d_elements = VGroup(thank_you, pietro,
+                                 francesco, outline_trophies_group)
 
-        # --- 5. Final Fade Out ---
-        elements_to_fade = [
-            thank_you_text,
-            appreciation_text,
-            outline_trophies_group, # This group now contains the filled trophies
-        ]
-        self.play(
-            LaggedStart(
-                *[FadeOut(mob) for mob in elements_to_fade],
-                lag_ratio=0.1 # Quick fade out
-            )
-        )
-        self.wait(final_pause_duration) # Final pause before video ends
+        self.play(FadeOut(all_2d_elements, shift = 0.5*UP))
+        self.wait(0.5)
