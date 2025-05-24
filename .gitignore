@@ -31,9 +31,12 @@
 *.out
 *.app
 
-#latex stuff
+# latex stuff
 *.aux
 *.log
+
+# video
+*.mp4
 
 # Mac stuff
 .DS_Store
