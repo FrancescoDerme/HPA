@@ -202,37 +202,8 @@ class scene3(ThreeDScene):
 
         self.play(Write(laplace_eq_system), run_time=2.5)
 
-        boundary_expr = MathTex(
-            r"""\text{Let } \Omega = (-L, L)^2, \partial\Omega = \bigcup_{i=1}^4 \Gamma_i \text{ where:}""",
-            font_size=40
-        ).next_to(laplace_eq_system, 3 * DOWN)
-
-        self.play(Write(boundary_expr), run_time=2)
-        
-        boundary_details_1 = MathTex(            
-            r"""\begin{alignedat}{2}
-                \Gamma_1 &= \{ (L, y)   &&\mid -L \le y \le L \}, \text{ }
-                \Gamma_2 &= \{ (-L, y)  &&\mid -L \le y \le L \}
-            \end{alignedat}""",
-            font_size=40
-        ).next_to(boundary_expr, DOWN, buff = 0.5)
-
-        boundary_details_2 = MathTex(            
-            r"""\begin{alignedat}{2}
-                \Gamma_3 &= \{ (x, L)   &&\mid -L \le x \le L \}, \text{ }
-                \Gamma_4 &= \{ (x, -L)  &&\mid -L \le x \le L \}
-            \end{alignedat}""",
-            font_size=40
-        ).next_to(boundary_details_1, DOWN)
-     
-        self.play(
-            Write(boundary_details_1),
-            Write(boundary_details_2),
-            run_time=2)
-        self.wait(2.0)
-
-        text_elements = VGroup(title, laplace_eq_system, boundary_expr,
-                               boundary_details_1, boundary_details_2)
+        text_elements = VGroup(title, laplace_eq_system)
+        self.wait(1)
         self.play(FadeOut(text_elements, shift=UP * 0.5), run_time=1.0)
 
         L_val = 1.0
@@ -381,7 +352,7 @@ class scene3(ThreeDScene):
             Create(colored_squares),
             Create(square_lines),
             run_time=6.0)
-        self.wait(4.0)
+        self.wait(10.0)
 
         all_3d_objects = VGroup(axes, axes_labels, solution)
 
