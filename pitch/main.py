@@ -7,8 +7,10 @@ class scene1(Scene):
     def construct(self):
         title_text = Tex("hp-adaptive strategies for high-fidelity multi-physics simulations",
                          font_size=40, color=WHITE)
-        self.play(Write(title_text), run_time=2)
-        self.wait(0.5)
+        
+        self.wait(1)
+        self.play(Write(title_text), run_time=3)
+        self.wait(1.5)
 
         pietro = Text("Pietro Fumagalli", font_size=30, color=BLUE_C).shift(1.8 * LEFT + 0.5 * DOWN)
         francesco = Text("Francesco Derme", font_size=30, color=BLUE_C).shift(1.8 * RIGHT + 0.5 * DOWN)
@@ -17,13 +19,14 @@ class scene1(Scene):
                   Write(francesco),
                   run_time=1.5)
         
-        self.wait(2)
+        self.wait(5)
 
         main_titles_group = VGroup(title_text, pietro, francesco)
         self.play(FadeOut(main_titles_group, shift=UP*0.5), run_time=1.0)
-        self.wait(0.2)
+        self.wait(0.5)
 
-        hexagons = VGroup()
+        """
+        # Removed complicated transition
         nrows = 3
         ncols = 6
         radius = 2
@@ -88,7 +91,8 @@ class scene1(Scene):
         all_objects = VGroup(hexagons, coarse_mesh_lines, fine_mesh_lines)
         self.play(FadeOut(all_objects, shift=UP*0.5), run_time=1.0)
         self.wait(0.5)
-
+        """
+        
 class scena2(Scene):
     def construct(self):
         h = Text("h", color=BLUE_C, font_size = 45).to_corner(UP)
@@ -101,6 +105,7 @@ class scena2(Scene):
         end_pos = [0, -h.get_y(), 0]
         middle_line = Line(start=start_pos, end=end_pos)
 
+        self.wait(1)
         self.play(Write(h),
                   Write(p),
                   Create(middle_line),
@@ -171,7 +176,7 @@ class scena2(Scene):
             run_time = 6.5
         )
         
-        self.wait(2.5)
+        self.wait(4.5)
         all_objects = VGroup(hexagons_left, hexagons_right, h, p, middle_line,
                              fine_mesh_lines, degrees)
         self.play(FadeOut(all_objects, shift=UP*0.5), run_time=1.0)
@@ -182,6 +187,7 @@ class scene3(ThreeDScene):
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
         self.camera.frame_height = 8.5
 
+        self.wait(1)
         title = Text("A first example: the laplacian", font_size=40).to_edge(UP).shift(DOWN * 0.5)
         self.play(Write(title), run_time=1.5)
         self.wait(0.5)
@@ -342,7 +348,7 @@ class scene3(ThreeDScene):
             lambda u, v: axes.c2p(u, v, solution_func(u, v)),
             u_range=[-L_val, 0],
             v_range=[-L_val, 0],
-            resolution=(18, 18),
+            resolution=(24, 24),
             **surface_options
         )
         solution_BR = Surface(
@@ -363,7 +369,7 @@ class scene3(ThreeDScene):
             lambda u, v: axes.c2p(u, v, solution_func(u, v)),
             u_range=[0, L_val],
             v_range=[0, L_val],
-            resolution=(18, 18),
+            resolution=(24, 24),
             **surface_options 
         )
         
@@ -374,7 +380,7 @@ class scene3(ThreeDScene):
             Create(solution),
             Create(colored_squares),
             Create(square_lines),
-            run_time=5.0)
+            run_time=6.0)
         self.wait(4.0)
 
         all_3d_objects = VGroup(axes, axes_labels, solution)
@@ -392,6 +398,8 @@ class scene4(ThreeDScene):
         self.camera.frame_height = 8.5
 
         title = Text("Time-dependent reaction-diffusion systems", font_size=40).to_edge(UP).shift(DOWN * 0.5)
+
+        self.wait(1)
         self.play(Write(title), run_time=1.5)
         self.wait(0.5)
 
@@ -634,11 +642,11 @@ class scene4(ThreeDScene):
         self.play(Create(solution_surface),
                   Create(colored_squares),
                   Create(square_lines),
-                  run_time=3.0)
+                  run_time=4.0)
         
         self.play(
             time.animate.set_value(2.5),
-            run_time=10.0,
+            run_time=11.0,
             rate_func=linear
         )
 
@@ -692,7 +700,7 @@ class scene5(Scene):
         add_rectangles(quadrant_centers["TL"], n_coarse_divs, WHITE)
         add_rectangles(quadrant_centers["BR"], n_coarse_divs, WHITE)
 
-        start_time = -5
+        start_time = -4
         time = ValueTracker(start_time)
 
         def solution_func(x, y, t):            
@@ -700,13 +708,13 @@ class scene5(Scene):
         
         def update_mesh_element(mob):
             t = time.get_value()
-            value = 1
             value = solution_func(mob.get_center()[0] / 6, mob.get_center()[1] / 6, time.get_value())
+            value = (value + 0.11) / 1.11
             r = Rectangle(width=mob.width, height=mob.height, 
                         stroke_color=mob.get_stroke_color(),
                         stroke_width=mob.get_stroke_width(),
-                        fill_opacity = min(2*(t-start_time), 1) * (0.2 + 0.6 * value),
-                        fill_color = interpolate_color(BLUE_C, RED_C, value + random.random()*0.3))
+                        fill_opacity = min(2*(t-start_time), 1),
+                        fill_color = interpolate_color(BLUE_C, RED_C, value))
             r.move_to(mob.get_center())
             mob.become(r)
                 
@@ -714,6 +722,7 @@ class scene5(Scene):
             element.add_updater(update_mesh_element)
             update_mesh_element(element)
 
+        self.wait(1)
         self.play(Create(domain),
                   Create(mesh_elements, lag_ratio=0.002, run_time=4.0))
         self.wait(0.5)
@@ -767,7 +776,7 @@ class scene5(Scene):
         wait_to_plot = 2.55
         
         def update_indicator(mob):
-            t = time.get_value() + 1
+            t = time.get_value() + 0.5
             p = plot_axes.plot(lambda y_val: solution_func(x_param, y_val, t),
                                **indicator_params)
             
@@ -781,9 +790,9 @@ class scene5(Scene):
         indicator_curve.add_updater(update_indicator)
 
         time_value_animation = time.animate(
-            run_time=15, 
+            run_time=18, 
             rate_func=linear
-        ).set_value(2.5)
+        ).set_value(2)
 
         mesh_sequence = Succession(
             Wait(1.5),
@@ -825,24 +834,115 @@ class scene6(Scene):
         left_line = Line(start=start_pos_l, end=end_pos_l)
         right_line = Line(start=start_pos_r, end=end_pos_r)
 
-        t1 = Text("Shape optimality", color=BLUE_C, font_size = 34).to_corner(UP)
-        t2 = Text("Optimal degree", color=RED_C, font_size = 34)
-        t3 = Text("Derefinement", color=GREEN_C, font_size = 34)
-
+        t1 = Text("Shape optimality", color=BLUE_C, font_size = 34).to_corner(UP).shift(0.25*DOWN)
         t1.move_to([-2*x_delta, t1.get_y(), 0])
+
+        t2 = Text("Optimal degree", color=RED_C, font_size = 34)
         t2.move_to([0, t1.get_y(), 0])
+
+        t3 = Text("Derefinement", color=GREEN_C, font_size = 34)
         t3.move_to([2*x_delta, t1.get_y(), 0])
-
-        self.play(Create(left_line),
-                  Create(right_line),
-                  Write(t1),
-                  Write(t2),
-                  Write(t3),
-                  run_time = 2.5)
         
+        # Group 1
         pentagon = RegularPolygon(n=5, radius=1.2, color = WHITE).move_to([-2*x_delta, 0, 0])
-        baseline = Line([-1.5, pentagon.get_bottom()[1], 0], [1.5, pentagon.get_bottom()[1], 0], color=WHITE)
 
+        self.wait(1)
+        self.play(LaggedStart(
+                Write(t1),
+                Create(pentagon),
+                lag_ratio=0.2),
+            run_time = 2
+        )
+        
+        square_size = 2.4*math.sin(math.pi/5)
+        square = Square(side_length=square_size, color=WHITE)
+        square.move_to([-2*x_delta, square_size/2 + pentagon.get_bottom()[1], 0])
+        square_vert = square.get_vertices()
+        penta_vert = pentagon.get_vertices()
+
+        # Vertices are ordered counter-clockwise from the top
+        mesh_refinement1 = VGroup()
+        mesh_refinement1.add(square)
+        mesh_refinement1.add(Line(square_vert[1], penta_vert[1], color=BLUE_A))
+        mesh_refinement1.add(Line(square_vert[1], penta_vert[0], color=BLUE_A))
+        mesh_refinement1.add(Line(square_vert[0], penta_vert[0], color=BLUE_A))
+        mesh_refinement1.add(Line(square_vert[0], penta_vert[4], color=BLUE_A))
+
+        self.play(Create(mesh_refinement1),
+                  run_time = 2)
+        
+        mesh_refinement2 = VGroup()
+        center = pentagon.get_center()
+        mesh_refinement2.add(Line(center, penta_vert[0], color=BLUE_B))
+        mesh_refinement2.add(Line(center, penta_vert[1], color=BLUE_B))
+        mesh_refinement2.add(Line(center, penta_vert[2], color=BLUE_B))
+        mesh_refinement2.add(Line(center, penta_vert[3], color=BLUE_B))
+        mesh_refinement2.add(Line(center, penta_vert[4], color=BLUE_B))
+
+        self.play(Transform(mesh_refinement1, mesh_refinement2),
+                  run_time = 2)
+        
+        pentagon2 = RegularPolygon(n=5, radius=0.6, color = BLUE_C).move_to([-2*x_delta, 0, 0])
+        penta_vert2 = pentagon2.get_vertices()
+
+        mesh_refinement3 = VGroup()
+        mesh_refinement3.add(Line(penta_vert[0], penta_vert2[0], color=BLUE_C))
+        mesh_refinement3.add(Line(penta_vert[1], penta_vert2[1], color=BLUE_C))
+        mesh_refinement3.add(Line(penta_vert[2], penta_vert2[2], color=BLUE_C))
+        mesh_refinement3.add(Line(penta_vert[3], penta_vert2[3], color=BLUE_C))
+        mesh_refinement3.add(Line(penta_vert[4], penta_vert2[4], color=BLUE_C))
+        mesh_refinement3.add(pentagon2)
+
+        self.play(Transform(mesh_refinement1, mesh_refinement3),
+                  run_time = 2)
+
+        # Group 2
+        def poly1(x):
+            return x
+        def poly2(x):
+            return x**2
+        def poly3(x):
+            return x**3
+        
+        axes = Axes(
+            x_range=[-1, 1, 0.2], 
+            y_range=[-0.2, 1, 0.2],
+            axis_config={
+                "include_numbers": False,
+                "include_tip": True,
+                "tick_size": 0.4,
+                "tip_width": 0.6,
+                "tip_height": 0.8
+            },
+        ).scale(0.275)
+        
+        axes.move_to([0, pentagon.get_bottom()[1] + axes.get_top()[1] - 0.2, 0])
+        
+        self.play(LaggedStart(
+                Create(left_line),
+                Write(t2),
+                Create(axes),
+                lag_ratio = 0.2),
+            run_time = 2
+        )
+        
+        x_range=[-1, 1]
+        plot1 = axes.plot(poly1, x_range=x_range, color=RED_A)
+        
+        self.play(Create(plot1),
+                  run_time = 2)
+        
+        plot2 = axes.plot(poly2, x_range=x_range, color=RED_B)
+
+        self.play(Create(plot2),
+                  run_time = 2)
+        
+        plot3 = axes.plot(poly3, x_range=x_range, color=RED_C)
+
+        self.play(Create(plot3),
+                  run_time = 2)
+        
+        # Group 3        
         big_square_size = 2.5
         bigsquare = Square(side_length=big_square_size, color=WHITE)
         bigsquare.move_to([2*x_delta, big_square_size/2 + pentagon.get_bottom()[1], 0])
@@ -862,113 +962,45 @@ class scene6(Scene):
                                color = WHITE)
             square_lines.add(square_line)
 
-        self.play(Create(pentagon),
-                  Create(baseline),
-                  Create(bigsquare),
-                  Create(square_lines),
-                  run_time = 3)
-        
-        square_size = 2.4*math.sin(math.pi/5)
-        square = Square(side_length=square_size, color=WHITE)
-        square.move_to([-2*x_delta, square_size/2 + pentagon.get_bottom()[1], 0])
+        self.play(LaggedStart(
+                Create(right_line),
+                Write(t3),
+                Create(bigsquare),
+                Create(square_lines),
+                lag_ratio=0.2),
+            run_time = 2
+            )
 
-        square_vert = square.get_vertices()
-        penta_vert = pentagon.get_vertices()
-
-        # Vertices are ordered counter-clockwise from the top
-        line1_1 = Line(square_vert[1], penta_vert[1], color=BLUE_A)
-        line1_2 = Line(square_vert[1], penta_vert[0], color=BLUE_A)
-        line1_3 = Line(square_vert[0], penta_vert[0], color=BLUE_A)
-        line1_4 = Line(square_vert[0], penta_vert[4], color=BLUE_A)
-
-        mesh_refinement1 = VGroup()
-        mesh_refinement1.add(square)
-        mesh_refinement1.add(line1_1)
-        mesh_refinement1.add(line1_2)
-        mesh_refinement1.add(line1_3)
-        mesh_refinement1.add(line1_4)
-
-        def poly1(x):
-            return x
-        def poly2(x):
-            return x**2
-        def poly3(x):
-            return x**3
-        
-        axes = Axes(
-            x_range=[-1.8, 1.8, 0.1], 
-            y_range=[0, 5, 0.1],
-            tips=False
-        ).scale(0.25).move_to([0, pentagon.get_y(), 0] + UP/2)
-
-        indexes = random.sample(range(0, len(square_lines)), 3)
+        indexes = [2, 4, 5]
         dashed_1 = DashedLine(square_lines[indexes[0]].get_start(), square_lines[indexes[0]].get_end(), dashed_ratio=0.5, color = GREEN_C)
 
-        x_range = [-1.8, 1.8]
-        plot1 = axes.plot(poly1, x_range=x_range, color=RED_A)
-
-        self.play(Create(mesh_refinement1),
-                  Create(plot1),
-                  FadeOut(square_lines[indexes[0]]),
+        self.play(FadeOut(square_lines[indexes[0]]),
                   Create(dashed_1),
-            run_time = 3)
-        
-        center = pentagon.get_center()
-        line2_1 = Line(center, penta_vert[0], color=BLUE_B)
-        line2_2 = Line(center, penta_vert[1], color=BLUE_B)
-        line2_3 = Line(center, penta_vert[2], color=BLUE_B)
-        line2_4 = Line(center, penta_vert[3], color=BLUE_B)
-        line2_5 = Line(center, penta_vert[4], color=BLUE_B)
-
-        mesh_refinement2 = VGroup()
-        mesh_refinement2.add(line2_1)
-        mesh_refinement2.add(line2_2)
-        mesh_refinement2.add(line2_3)
-        mesh_refinement2.add(line2_4)
-        mesh_refinement2.add(line2_5)
+                  run_time = 2)
 
         dashed_2 = DashedLine(square_lines[indexes[1]].get_start(), square_lines[indexes[1]].get_end(), dashed_ratio=0.5, color = GREEN_C)
-        plot2 = axes.plot(poly2, x_range=x_range, color=RED_B)
 
-        self.play(Transform(mesh_refinement1, mesh_refinement2),
-                  Create(plot2),
-                  FadeOut(square_lines[indexes[1]]),
+        self.play(FadeOut(square_lines[indexes[1]]),
                   Create(dashed_2),
-            run_time = 3)
-        
-        pentagon2 = RegularPolygon(n=5, radius=0.6, color = BLUE_C).move_to([-2*x_delta, 0, 0])
-        penta_vert2 = pentagon2.get_vertices()
-
-        line3_1 = Line(penta_vert[0], penta_vert2[0], color=BLUE_C)
-        line3_2 = Line(penta_vert[1], penta_vert2[1], color=BLUE_C)
-        line3_3 = Line(penta_vert[2], penta_vert2[2], color=BLUE_C)
-        line3_4 = Line(penta_vert[3], penta_vert2[3], color=BLUE_C)
-        line3_5 = Line(penta_vert[4], penta_vert2[4], color=BLUE_C)
-
-        mesh_refinement3 = VGroup()
-        mesh_refinement3.add(pentagon2)
-        mesh_refinement3.add(line3_1)
-        mesh_refinement3.add(line3_2)
-        mesh_refinement3.add(line3_3)
-        mesh_refinement3.add(line3_4)
-        mesh_refinement3.add(line3_5)
+                  run_time = 2)
 
         dashed_3 = DashedLine(square_lines[indexes[2]].get_start(), square_lines[indexes[2]].get_end(), dashed_ratio=0.5, color = GREEN_C)
-        plot3 = axes.plot(poly3, x_range=x_range, color=RED_C)
 
-        self.play(Transform(mesh_refinement1, mesh_refinement3),
-                  Create(plot3),
-                  FadeOut(square_lines[indexes[2]]),
+        self.play(FadeOut(square_lines[indexes[2]]),
                   Create(dashed_3),
-            run_time = 3)
+                  run_time = 2)
         
-        self.wait(2)
+        self.wait(2.5)
         
+        square_lines.remove(square_lines[indexes[2]])
+        square_lines.remove(square_lines[indexes[1]])
+        square_lines.remove(square_lines[indexes[0]])
+
         all_2d_objects = VGroup(left_line, right_line, t1, t2, t3,
-                                pentagon, baseline, bigsquare, square_lines,
+                                pentagon, bigsquare, square_lines,
                                 dashed_1, dashed_2,
                                 mesh_refinement1, dashed_3,
-                                plot1, plot2, plot3)
+                                axes, plot1, plot2, plot3)
         self.play(FadeOut(all_2d_objects, shift = UP*0.5),
                   run_time=1.0)
         self.wait(0.5)
@@ -1025,10 +1057,11 @@ class scene7(Scene):
         pietro.shift(0.15*DOWN).shift(2.2*LEFT)
         francesco.shift(0.15*DOWN).shift(2.2*RIGHT)
 
+        self.wait(1)
         self.play(Write(thank_you))
         self.play(Write(pietro),
                   Write(francesco),
-                  run_time = 2)
+                  run_time = 1.5)
         self.wait(1.5)
 
         outline_trophies_group = VGroup()
@@ -1053,7 +1086,7 @@ class scene7(Scene):
             filled_version.move_to(outline_trophy_instance.get_center())
             transform_animations.append(Transform(outline_trophy_instance, filled_version))
 
-        self.play(transform_animations)
+        self.play(LaggedStart(*transform_animations, lag_ratio=0.2))
         self.wait(2)
 
         all_2d_elements = VGroup(thank_you, pietro,
